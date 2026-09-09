@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <!-- figma:head-start -->
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nomos · AI 律师工作台</title>
+    <!-- figma:head-end -->
+  </head>
+  <body>
+    <!-- figma:body-start -->
+    <div id="root"></div>
+    <script>
+      if (window.location.protocol === 'file:' && !window.location.pathname.endsWith('nomos-standalone.html') && !window.location.pathname.endsWith('nomos-figma.html')) {
+        window.location.replace('./nomos-standalone.html')
+      }
+    </script>
+    <script type="module" src="/src/main.tsx"></script>
+    <!-- figma:body-end -->
+  </body>
+</html>

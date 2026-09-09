@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>未来律所暗色欢迎首页</title>
+  <style>
+    :root {
+      --bg: #050608;
+      --bg-2: #0a0b0f;
+      --sidebar: rgba(18, 19, 23, 0.74);
+      --sidebar-2: rgba(26, 27, 32, 0.6);
+      --panel: rgba(22, 23, 28, 0.8);
+      --panel-2: rgba(34, 35, 42, 0.62);
+      --line: rgba(255, 255, 255, 0.24);
+      --line-soft: rgba(255, 255, 255, 0.12);
+      --text: rgba(255, 255, 255, 0.95);
+      --muted: rgba(255, 255, 255, 0.72);
+      --muted-2: rgba(255, 255, 255, 0.46);
+      --green: #5b63d3;
+      --green-soft: rgba(91, 99, 211, 0.18);
+      --blue: #7882ed;
+      --cyan: #4fdad7;
+      --accent: #d98e5f;
+      --pink: rgba(217, 142, 95, 0.18);
+      --shadow-lg: 0 34px 92px rgba(0, 0, 0, 0.5);
+      --shadow-md: 0 18px 46px rgba(0, 0, 0, 0.34);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      font-family: Inter, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+      background:
+        radial-gradient(circle at 52% 26%, rgba(255, 255, 255, 0.06), transparent 24%),
+        linear-gradient(180deg, #2e2f33 0%, #0b0b0f 32%, #040507 100%);
+      color: var(--text);
+      overflow: hidden;
+    }
+
+    body::before,
+    body::after {
+      content: "";
+      position: fixed;
+      inset: auto;
+      pointer-events: none;
+      z-index: 0;
+      filter: blur(1px);
+    }
+
+    body::before {
+      width: 1160px;
+      height: 540px;
+      left: -160px;
+      top: 44px;
+      border-radius: 58% 42% 56% 44% / 48% 56% 44% 52%;
+      background:
+        radial-gradient(circle at 28% 24%, rgba(255, 255, 255, 0.84), rgba(255, 255, 255, 0.08) 18%, rgba(0, 0, 0, 0.96) 56%, rgba(255, 255, 255, 0.16) 70%, transparent 78%),
+        linear-gradient(160deg, rgba(255, 255, 255, 0.1), rgba(0, 0, 0, 0.96) 40%, rgba(255, 255, 255, 0.16) 82%, rgba(255, 255, 255, 0.02));
+      box-shadow:
+        inset 0 2px 10px rgba(255, 255, 255, 0.26),
+        inset -28px -18px 60px rgba(0, 0, 0, 0.82),
+        0 42px 86px rgba(0, 0, 0, 0.44);
+      transform: rotate(-11deg);
+      opacity: 0.96;
+    }
+
+    body::after {
+      width: 980px;
+      height: 420px;
+      right: -120px;
+      top: 22px;
+      border-radius: 50% 50% 44% 56% / 50% 40% 60% 50%;
+      background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.44), rgba(255, 255, 255, 0.02) 12%, rgba(0, 0, 0, 0.95) 38%, rgba(255, 255, 255, 0.18) 72%, rgba(255, 255, 255, 0.04)),
+        radial-gradient(circle at 78% 18%, rgba(255, 255, 255, 0.62), transparent 20%);
+      box-shadow:
+        inset 0 1px 8px rgba(255, 255, 255, 0.24),
+        inset -24px -18px 48px rgba(0, 0, 0, 0.86),
+        0 40px 80px rgba(0, 0, 0, 0.45);
+      transform: rotate(32deg);
+      opacity: 0.92;
+    }
+
+    .page {
+      position: relative;
+      z-index: 1;
+      width: min(1880px, calc(100vw - 28px));
+      height: min(1260px, calc(100vh - 28px));
+      margin: 14px auto;
+      padding: 14px;
+      border-radius: 28px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.02)),
+        linear-gradient(135deg, rgba(255, 255, 255, 0.028), rgba(255, 255, 255, 0.01));
+      border: 1px solid rgba(255, 255, 255, 0.11);
+      box-shadow: var(--shadow-lg), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      overflow: hidden;
+      backdrop-filter: blur(8px) saturate(130%);
+    }
+
+    .page::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(118deg, rgba(255, 255, 255, 0.05), transparent 18%, transparent 78%, rgba(255, 255, 255, 0.02)),
+        radial-gradient(circle at 18% -8%, rgba(255, 255, 255, 0.06), transparent 24%);
+      mix-blend-mode: screen;
+      pointer-events: none;
+    }
+
+    .layout {
+      height: 100%;
+      display: grid;
+      grid-template-columns: 300px minmax(0, 1fr);
+      gap: 14px;
+    }
+
+    .sidebar,
+    .hero-panel,
+    .composer,
+    .knowledge-chip,
+    .quick-pill,
+    .fab {
+      position: relative;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), var(--shadow-md);
+      backdrop-filter: blur(18px) saturate(145%);
+    }
+
+    .sidebar::before,
+    .hero-panel::before,
+    .composer::before {
+      content: "";
+      position: absolute;
+      left: 10px;
+      right: 10px;
+      top: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.18), transparent);
+      pointer-events: none;
+    }
+
+    .sidebar {
+      border-radius: 22px;
+      padding: 16px 14px;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      background:
+        linear-gradient(180deg, rgba(24, 25, 30, 0.78), rgba(13, 14, 18, 0.82)),
+        linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.01));
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 2px 2px 22px;
+    }
+
+    .brand-mark {
+      width: 38px;
+      height: 38px;
+      border-radius: 13px;
+      position: relative;
+      background: linear-gradient(135deg, rgba(91, 99, 211, 0.96), rgba(157, 164, 246, 0.8));
+      box-shadow: 0 10px 20px rgba(91, 99, 211, 0.18);
+      flex: none;
+      overflow: hidden;
+    }
+
+    .brand-mark::before {
+      content: "";
+      position: absolute;
+      inset: 7px 9px 7px 7px;
+      border-radius: 15px 15px 15px 6px;
+      border: 4px solid rgba(9, 10, 12, 0.94);
+      border-right-width: 5px;
+      transform: rotate(10deg);
+    }
+
+    .brand-mark::after {
+      content: "";
+      position: absolute;
+      width: 6px;
+      height: 6px;
+      right: 7px;
+      bottom: 7px;
+      border-radius: 50%;
+      background: rgba(9, 10, 12, 0.94);
+    }
+
+    .brand-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: rgba(255, 255, 255, 0.94);
+      letter-spacing: -0.02em;
+    }
+
+    .section-label {
+      margin: 4px 2px 10px;
+      font-size: 11px;
+      color: var(--muted-2);
+      font-weight: 600;
+    }
+
+    .nav-group {
+      display: grid;
+      gap: 7px;
+      margin-bottom: 18px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      border-radius: 16px;
+      color: rgba(255, 255, 255, 0.82);
+      font-size: 15px;
+      font-weight: 550;
+      text-decoration: none;
+      transition: 180ms ease;
+    }
+
+    .nav-item:hover {
+      background: rgba(255, 255, 255, 0.05);
+      transform: translateX(2px);
+    }
+
+    .nav-item.active {
+      color: rgba(255, 255, 255, 0.96);
+      background:
+        linear-gradient(135deg, rgba(91, 99, 211, 0.14), rgba(255, 255, 255, 0.06)),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
+      border: 1px solid rgba(91, 99, 211, 0.18);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 8px 18px rgba(0, 0, 0, 0.18);
+    }
+
+    .nav-icon {
+      width: 20px;
+      height: 20px;
+      position: relative;
+      flex: none;
+      color: currentColor;
+    }
+
+    .nav-icon.plus::before,
+    .nav-icon.plus::after,
+    .nav-icon.doc::before,
+    .nav-icon.doc::after,
+    .nav-icon.msg::before,
+    .nav-icon.msg::after {
+      content: "";
+      position: absolute;
+      border-color: currentColor;
+    }
+
+    .nav-icon.plus {
+      border: 1.8px solid currentColor;
+      border-radius: 50%;
+    }
+
+    .nav-icon.plus::before,
+    .nav-icon.plus::after {
+      left: 50%;
+      top: 50%;
+      background: currentColor;
+      border-radius: 999px;
+      transform: translate(-50%, -50%);
+    }
+
+    .nav-icon.plus::before {
+      width: 10px;
+      height: 1.8px;
+    }
+
+    .nav-icon.plus::after {
+      width: 1.8px;
+      height: 10px;
+    }
+
+    .nav-icon.doc::before {
+      inset: 2px 3px 3px 3px;
+      border: 1.8px solid currentColor;
+      border-radius: 4px;
+    }
+
+    .nav-icon.doc::after {
+      width: 7px;
+      height: 7px;
+      right: 3px;
+      top: 2px;
+      border-top: 1.8px solid currentColor;
+      border-right: 1.8px solid currentColor;
+      transform: skew(-10deg, -10deg);
+    }
+
+    .nav-icon.msg::before {
+      inset: 3px;
+      border: 1.8px solid currentColor;
+      border-radius: 50%;
+    }
+
+    .nav-icon.msg::after {
+      width: 7px;
+      height: 7px;
+      left: 3px;
+      bottom: 1px;
+      border-left: 1.8px solid currentColor;
+      border-bottom: 1.8px solid currentColor;
+      border-radius: 0 0 0 6px;
+      transform: rotate(-32deg);
+    }
+
+    .sidebar-footer {
+      margin-top: auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 6px 4px;
+      color: var(--muted);
+    }
+
+    .footer-user,
+    .footer-collapse {
+      width: 24px;
+      height: 24px;
+      position: relative;
+      border-radius: 50%;
+    }
+
+    .footer-user::before,
+    .footer-user::after,
+    .footer-collapse::before,
+    .footer-collapse::after {
+      content: "";
+      position: absolute;
+      background: currentColor;
+      border-radius: 999px;
+    }
+
+    .footer-user::before {
+      width: 7px;
+      height: 7px;
+      left: 8px;
+      top: 4px;
+    }
+
+    .footer-user::after {
+      width: 12px;
+      height: 7px;
+      left: 6px;
+      bottom: 4px;
+      border-radius: 8px 8px 4px 4px;
+    }
+
+    .footer-collapse::before,
+    .footer-collapse::after {
+      width: 7px;
+      height: 1.6px;
+      top: 11px;
+    }
+
+    .footer-collapse::before {
+      left: 5px;
+      transform: rotate(-40deg);
+    }
+
+    .footer-collapse::after {
+      left: 10px;
+      transform: rotate(40deg);
+    }
+
+    .main {
+      min-width: 0;
+      display: grid;
+      place-items: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-panel {
+      width: min(900px, 88%);
+      padding: 44px 48px 40px;
+      border-radius: 30px;
+      text-align: center;
+      background:
+        linear-gradient(180deg, rgba(34, 35, 40, 0.74), rgba(17, 18, 22, 0.8)),
+        linear-gradient(135deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.01));
+      overflow: hidden;
+    }
+
+    .hero-panel::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.12), transparent 34%),
+        radial-gradient(circle at 82% 12%, rgba(91, 99, 211, 0.12), transparent 24%),
+        radial-gradient(circle at 18% 14%, rgba(120, 130, 237, 0.12), transparent 20%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 24%);
+      pointer-events: none;
+    }
+
+    .hero-logo {
+      width: 54px;
+      height: 54px;
+      margin: 0 auto 18px;
+      border-radius: 18px;
+      position: relative;
+      background: linear-gradient(135deg, rgba(91, 99, 211, 0.96), rgba(164, 170, 247, 0.82));
+      box-shadow: 0 10px 22px rgba(91, 99, 211, 0.16);
+      overflow: hidden;
+    }
+
+    .hero-logo::before {
+      content: "";
+      position: absolute;
+      inset: 9px 12px 9px 9px;
+      border-radius: 20px 20px 20px 7px;
+      border: 6px solid rgba(9, 10, 12, 0.94);
+      border-right-width: 7px;
+      transform: rotate(10deg);
+    }
+
+    .hero-logo::after {
+      content: "";
+      position: absolute;
+      width: 7px;
+      height: 7px;
+      right: 10px;
+      bottom: 10px;
+      border-radius: 50%;
+      background: rgba(9, 10, 12, 0.94);
+    }
+
+    .hero-title {
+      margin: 0 0 30px;
+      font-size: clamp(30px, 2.9vw, 46px);
+      line-height: 1.18;
+      font-weight: 430;
+      letter-spacing: -0.04em;
+      color: rgba(255, 255, 255, 0.95);
+    }
+
+    .hero-title .accent {
+      color: #d98e5f;
+      text-shadow: 0 0 18px rgba(217, 142, 95, 0.26);
+    }
+
+    .composer-wrap {
+      display: grid;
+      gap: 22px;
+      justify-items: center;
+      position: relative;
+      z-index: 1;
+    }
+
+    .composer {
+      width: min(760px, 100%);
+      min-height: 150px;
+      border-radius: 24px;
+      padding: 20px 20px 14px;
+      text-align: left;
+      background:
+        linear-gradient(180deg, rgba(40, 41, 46, 0.8), rgba(18, 19, 23, 0.82)),
+        linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.01));
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.16),
+        inset 0 -40px 80px rgba(0, 0, 0, 0.34),
+        0 18px 34px rgba(0, 0, 0, 0.34);
+      display: grid;
+      grid-template-rows: 1fr auto;
+      gap: 14px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .composer::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at 20% 16%, rgba(120, 130, 237, 0.18), transparent 20%),
+        radial-gradient(circle at 78% 90%, rgba(217, 142, 95, 0.14), transparent 18%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 22%);
+      pointer-events: none;
+    }
+
+    .composer::before {
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.26), transparent);
+    }
+
+    .composer-placeholder {
+      color: rgba(255, 255, 255, 0.56);
+      font-size: 16px;
+      line-height: 1.6;
+      position: relative;
+      z-index: 1;
+    }
+
+    .composer-bottom {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .knowledge-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 14px;
+      border-radius: 999px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05)),
+        linear-gradient(135deg, rgba(91, 99, 211, 0.12), rgba(255, 255, 255, 0.04));
+      color: rgba(255, 255, 255, 0.84);
+      font-size: 15px;
+      font-weight: 600;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    }
+
+    .knowledge-icon {
+      width: 16px;
+      height: 16px;
+      border: 1.6px solid currentColor;
+      border-radius: 4px;
+      position: relative;
+      opacity: 0.92;
+    }
+
+    .knowledge-icon::before,
+    .knowledge-icon::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      border-left: 1.4px solid currentColor;
+      border-right: 1.4px solid currentColor;
+      width: 7px;
+    }
+
+    .knowledge-icon::before {
+      top: 2px;
+      bottom: 7px;
+    }
+
+    .knowledge-icon::after {
+      top: 8px;
+      bottom: 2px;
+    }
+
+    .send-button {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #d98e5f, #efb08a);
+      box-shadow: 0 14px 28px rgba(217, 142, 95, 0.28);
+      position: relative;
+      flex: none;
+    }
+
+    .send-button::before,
+    .send-button::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      background: #111;
+      border-radius: 999px;
+      transform: translate(-50%, -50%);
+    }
+
+    .send-button::before {
+      width: 1.8px;
+      height: 13px;
+      top: 47%;
+    }
+
+    .send-button::after {
+      width: 9px;
+      height: 9px;
+      border-right: 1.8px solid #111;
+      border-top: 1.8px solid #111;
+      background: transparent;
+      transform: translate(-50%, -20%) rotate(-45deg);
+    }
+
+    .quick-actions {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      position: relative;
+      z-index: 1;
+    }
+
+    .quick-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 16px;
+      border-radius: 999px;
+      color: rgba(255, 255, 255, 0.84);
+      font-size: 15px;
+      font-weight: 550;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.035)),
+        linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    }
+
+    .quick-icon {
+      width: 18px;
+      height: 18px;
+      position: relative;
+      flex: none;
+      color: currentColor;
+      opacity: 0.92;
+    }
+
+    .quick-icon.book::before,
+    .quick-icon.book::after,
+    .quick-icon.search::before,
+    .quick-icon.search::after,
+    .quick-icon.pen::before,
+    .quick-icon.pen::after {
+      content: "";
+      position: absolute;
+      border-color: currentColor;
+    }
+
+    .quick-icon.book::before {
+      inset: 2px 1px 2px 1px;
+      border: 1.6px solid currentColor;
+      border-radius: 4px;
+    }
+
+    .quick-icon.book::after {
+      left: 8px;
+      top: 2px;
+      bottom: 2px;
+      width: 1.6px;
+      background: currentColor;
+      border-radius: 999px;
+    }
+
+    .quick-icon.search::before {
+      width: 10px;
+      height: 10px;
+      left: 2px;
+      top: 2px;
+      border: 1.6px solid currentColor;
+      border-radius: 50%;
+    }
+
+    .quick-icon.search::after {
+      width: 7px;
+      height: 1.6px;
+      right: 1px;
+      bottom: 3px;
+      background: currentColor;
+      transform: rotate(45deg);
+      border-radius: 999px;
+    }
+
+    .quick-icon.pen::before {
+      width: 12px;
+      height: 4px;
+      left: 2px;
+      top: 7px;
+      border: 1.6px solid currentColor;
+      border-radius: 4px;
+      transform: rotate(-38deg);
+    }
+
+    .quick-icon.pen::after {
+      width: 5px;
+      height: 5px;
+      right: 1px;
+      top: 10px;
+      border-top: 1.6px solid currentColor;
+      border-right: 1.6px solid currentColor;
+      transform: rotate(10deg);
+    }
+
+    .fab {
+      position: absolute;
+      right: 26px;
+      bottom: 22px;
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background:
+        linear-gradient(135deg, rgba(217, 142, 95, 0.74), rgba(255, 255, 255, 0.18)),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.04));
+    }
+
+    .fab::before,
+    .fab::after {
+      content: "";
+      position: absolute;
+      inset: 50% auto auto 50%;
+      transform: translate(-50%, -50%);
+      border-radius: 999px;
+    }
+
+    .fab::before {
+      width: 16px;
+      height: 16px;
+      border: 1.8px solid #d98e5f;
+      border-top-color: transparent;
+      transform: translate(-50%, -50%) rotate(18deg);
+    }
+
+    .fab::after {
+      width: 4px;
+      height: 4px;
+      background: #d98e5f;
+      left: 24px;
+      top: 15px;
+    }
+
+    @media (max-width: 1280px) {
+      html,
+      body {
+        overflow: auto;
+      }
+
+      .page {
+        height: auto;
+        min-height: calc(100vh - 24px);
+      }
+
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .main {
+        min-height: 860px;
+      }
+
+      .hero-panel {
+        width: 96%;
+        padding: 40px 22px;
+      }
+
+      .hero-title {
+        font-size: 30px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="layout">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark"></div>
+          <div class="brand-title">未来律所</div>
+        </div>
+
+        <div class="section-label">功能</div>
+        <div class="nav-group">
+          <a class="nav-item active" href="#">
+            <span class="nav-icon plus"></span>
+            <span>新建</span>
+          </a>
+          <a class="nav-item" href="#">
+            <span class="nav-icon doc"></span>
+            <span>项目</span>
+          </a>
+        </div>
+
+        <div class="section-label">其他</div>
+        <div class="nav-group">
+          <a class="nav-item" href="#">
+            <span class="nav-icon msg"></span>
+            <span>产品反馈</span>
+          </a>
+        </div>
+
+        <div class="sidebar-footer">
+          <div class="footer-user"></div>
+          <div class="footer-collapse"></div>
+        </div>
+      </aside>
+
+      <main class="main">
+        <section class="hero-panel">
+          <div class="hero-logo"></div>
+          <h1 class="hero-title">早上好，我是 <span class="accent">未来律所</span></h1>
+
+          <div class="composer-wrap">
+            <div class="composer">
+              <div class="composer-placeholder">帮您处理什么?</div>
+              <div class="composer-bottom">
+                <div class="knowledge-chip">
+                  <span class="knowledge-icon"></span>
+                  <span>知识库</span>
+                </div>
+                <div class="send-button"></div>
+              </div>
+            </div>
+
+            <div class="quick-actions">
+              <div class="quick-pill">
+                <span class="quick-icon book"></span>
+                <span>法律咨询</span>
+              </div>
+              <div class="quick-pill">
+                <span class="quick-icon search"></span>
+                <span>法律检索</span>
+              </div>
+              <div class="quick-pill">
+                <span class="quick-icon pen"></span>
+                <span>文件审查</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div class="fab"></div>
+      </main>
+    </div>
+  </div>
+</body>
+</html>
