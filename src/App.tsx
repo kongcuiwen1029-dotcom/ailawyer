@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { Layers, Moon, Sun } from 'lucide-react'
+import { Contrast, Moon, Sun } from 'lucide-react'
 import AppDark from './AppDark'
 import ConversationView, {
   createInitialAssistantMessage,
@@ -18,6 +18,7 @@ const nextTheme: Record<Theme, Theme> = { light: 'dark', dark: 'gray', gray: 'li
 const themeLabel: Record<Theme, string> = { light: '切换深色', dark: '切换灰色', gray: '切换浅色' }
 const routeByShortcut: Record<string, ChatMode> = { consult: 'Direct', search: 'Agentic', review: 'Agentic', contract: 'Workflow' }
 const shortcutLabel: Record<string, string> = { consult: '法律咨询', search: '法律检索', review: '文件审查', contract: '合同起草' }
+const THINKING_DURATION_MS = 20000
 
 function responseFor(text: string, mode: ChatMode, project: Project): Pick<ChatMessage, 'text' | 'sources'> {
   if (mode === 'Direct') {
@@ -65,6 +66,7 @@ export default function App() {
   function queueAssistant(projectId: string, text: string, mode: ChatMode, projectOverride?: Project) {
     setGeneratingProjectId(projectId)
     setProjects(current => current.map(project => project.id === projectId ? { ...project, status: { kind: 'run', label: '生成中' } } : project))
+    // Keep the local demo long enough for the evidence stream to be legible.
     timerRef.current = window.setTimeout(() => {
       const project = projectOverride ?? projects.find(item => item.id === projectId)
       if (!project) return
@@ -73,7 +75,7 @@ export default function App() {
       setProjects(current => current.map(item => item.id === projectId ? { ...item, sessions: Math.max(item.sessions, 1), updated: '刚刚', status: { kind: 'ok', label: '已完成' } } : item))
       setGeneratingProjectId(null)
       timerRef.current = null
-    }, 850)
+    }, THINKING_DURATION_MS)
   }
 
   function openProject(project: Project) {
@@ -141,7 +143,7 @@ export default function App() {
         </div>
       ) : renderTheme()}
       <button className={`theme-toggle ${theme}`} onClick={() => setTheme(value => nextTheme[value])} aria-label={themeLabel[theme]} title={themeLabel[theme]}>
-        {theme === 'light' ? <Moon size={15} strokeWidth={2} /> : theme === 'dark' ? <Layers size={15} strokeWidth={2} /> : <Sun size={15} strokeWidth={2} />}
+        {theme === 'light' ? <Moon size={17} strokeWidth={2} /> : theme === 'dark' ? <Contrast size={17} strokeWidth={2} /> : <Sun size={17} strokeWidth={2} />}
       </button>
     </div>
   )

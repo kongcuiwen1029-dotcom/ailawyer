@@ -5,6 +5,7 @@ import {
   Bot,
   CheckCircle2,
   ChevronDown,
+  ChevronRight,
   CircleDot,
   FileText,
   FolderOpen,
@@ -62,6 +63,20 @@ const fallbackSources: ChatSource[] = [
   { kind: '全局 RAG', title: '民商法法规库', detail: '平台资料 · 检索命中 4 条' },
 ]
 
+const thinkingSteps = [
+  { title: '读取项目材料', detail: '扫描案卷并检查解析状态', metric: '已读取 18 份案卷，3 份未解析' },
+  { title: '核对法律依据', detail: '比对法规库与项目事实', metric: '已核对 42 条依据，4 条待确认' },
+  { title: '整理结论', detail: '标记需要人工复核的判断', metric: '27 条结论中 2 条待核验' },
+]
+
+const thinkingMaterials = [
+  { name: '尽调材料目录.md', status: '已读取', detail: '24 KB · 已提取目录、时间线与主体信息' },
+  { name: '股权结构说明.txt', status: '已读取', detail: '8 KB · 已识别 6 个股东及持股关系' },
+  { name: '历史沿革扫描件.pdf', status: '未解析', detail: 'OCR 队列 · 原文件需要更高分辨率' },
+]
+
+const THINKING_STEP_INTERVAL_MS = 5000
+
 function sourceIcon(kind: ChatSource['kind']) {
   if (kind === '项目案卷') return <FolderOpen size={14} strokeWidth={1.8} />
   if (kind === 'Connector') return <Globe2 size={14} strokeWidth={1.8} />
@@ -71,6 +86,146 @@ function sourceIcon(kind: ChatSource['kind']) {
 
 function formatNow() {
   return new Intl.DateTimeFormat('zh-CN', { hour: '2-digit', minute: '2-digit' }).format(new Date())
+}
+
+function ThinkingCharacter({ step }: { step: number }) {
+  const stages = ['reading', 'checking', 'concluding'] as const
+
+  return (
+    <div className={`thinking-character is-${stages[step]}`} aria-hidden="true">
+      <svg className="thinking-character-svg" viewBox="0 0 92 58" fill="none">
+        <path className="thinking-scene-floor" d="M9 49.5H82" />
+
+        <g className="thinking-person">
+          <circle className="thinking-person-head" cx="27" cy="16" r="6.5" />
+          <path className="thinking-person-body" d="M27 23V36.5" />
+          <path className="thinking-person-arm arm-left" d="M27 27L19.5 33.5L16 30.5" />
+          <path className="thinking-person-arm arm-right" d="M27 27L36 32L43 27.5" />
+          <path className="thinking-person-legs" d="M27 36.5L21.5 47M27 36.5L33.5 47" />
+        </g>
+
+        <g className="thinking-scene-paper">
+          <rect className="thinking-paper-back" x="49" y="10" width="24" height="32" rx="2.5" />
+          <path className="thinking-paper-front" d="M44 14.5H65.5L71 20V45H44V14.5Z" />
+          <path className="thinking-paper-fold" d="M65 14.5V20.5H71" />
+          <path className="thinking-paper-line line-one" d="M49 26H65" />
+          <path className="thinking-paper-line line-two" d="M49 31H63" />
+          <path className="thinking-paper-line line-three" d="M49 36H66" />
+        </g>
+
+        <g className="thinking-scene-magnifier">
+          <circle cx="57" cy="28" r="7" />
+          <path className="thinking-magnifier-handle" d="M62 33L68.5 39.5" />
+          <path className="thinking-scan-ray" d="M53 28H61" />
+        </g>
+
+        <g className="thinking-scene-nodes">
+          <path className="thinking-node-link link-one" d="M49 28L59 20L70 27" />
+          <path className="thinking-node-link link-two" d="M49 28L58 39L70 27" />
+          <circle className="thinking-node node-one" cx="49" cy="28" r="3" />
+          <circle className="thinking-node node-two" cx="59" cy="20" r="3" />
+          <circle className="thinking-node node-three" cx="58" cy="39" r="3" />
+          <circle className="thinking-node node-four" cx="70" cy="27" r="5.5" />
+          <path className="thinking-conclusion-check" d="M67.5 27L69.5 29L73 24.8" />
+        </g>
+      </svg>
+      <span className="thinking-scan-dot" />
+    </div>
+  )
+}
+
+function ThinkingPanel({ mode }: { mode: ChatMode }) {
+  const [activeStep, setActiveStep] = useState(0)
+  const [showDetails, setShowDetails] = useState(false)
+  const [selectedMaterial, setSelectedMaterial] = useState(0)
+  const panelRef = useRef<HTMLElement>(null)
+
+  useEffect(() => {
+    setActiveStep(0)
+    setShowDetails(false)
+    setSelectedMaterial(0)
+    const interval = window.setInterval(() => {
+      setActiveStep(value => Math.min(value + 1, thinkingSteps.length - 1))
+    }, THINKING_STEP_INTERVAL_MS)
+    return () => window.clearInterval(interval)
+  }, [mode])
+
+  useEffect(() => {
+    if (!showDetails) return
+    window.requestAnimationFrame(() => panelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }))
+  }, [showDetails])
+
+  const currentStep = thinkingSteps[activeStep]
+
+  return (
+    <section ref={panelRef} className="thinking-panel" aria-label="AI 思考过程" aria-live="polite">
+      <div className="thinking-panel-head">
+        <ThinkingCharacter key={activeStep} step={activeStep} />
+        <div className="thinking-copy">
+          <div className="thinking-title-row">
+            <strong>Nomos 正在思考</strong>
+            <span className="thinking-live-dot"><span />实时</span>
+          </div>
+          <span>{currentStep.title} · {currentStep.detail}</span>
+        </div>
+        <div className="thinking-mode">{mode}</div>
+      </div>
+
+      <div className="thinking-step-line" role="list" aria-label="思考阶段">
+        {thinkingSteps.map((step, index) => (
+          <div className={`thinking-step${index === activeStep ? ' active' : ''}${index < activeStep ? ' complete' : ''}`} key={step.title} role="listitem">
+            <span className="thinking-step-dot">{index < activeStep ? <CheckCircle2 size={12} strokeWidth={2.2} /> : index + 1}</span>
+            <span>{step.title}</span>
+          </div>
+        ))}
+      </div>
+
+      <div className="thinking-metrics">
+        <button className="thinking-metric" onClick={() => { setShowDetails(true); setSelectedMaterial(0) }} aria-label="查看案卷处理明细">
+          <span className="thinking-metric-label"><FileText size={13} strokeWidth={1.8} />案卷处理</span>
+          <strong>18 <small>/ 21 份</small></strong>
+          <span className="thinking-metric-caption">3 份未解析</span>
+        </button>
+        <button className="thinking-metric" onClick={() => { setShowDetails(true); setSelectedMaterial(2) }} aria-label="查看结论核验明细">
+          <span className="thinking-metric-label"><CheckCircle2 size={13} strokeWidth={1.8} />结论检查</span>
+          <strong>25 <small>/ 27 条</small></strong>
+          <span className="thinking-metric-caption">2 条待核验</span>
+        </button>
+      </div>
+
+      <div className="thinking-current-line">
+        <span className="thinking-current-pulse" />
+        <span>{currentStep.metric}</span>
+        <span className="thinking-progress-bar"><span style={{ width: `${Math.round(((activeStep + 1) / thinkingSteps.length) * 100)}%` }} /></span>
+      </div>
+
+      <button className="thinking-details-toggle" onClick={() => setShowDetails(value => !value)} aria-expanded={showDetails}>
+        <FileText size={13} strokeWidth={1.8} />
+        {showDetails ? '收起材料明细' : '查看材料明细'}
+        <ChevronDown size={14} strokeWidth={1.8} className={showDetails ? 'is-open' : ''} />
+      </button>
+
+      {showDetails && (
+        <div className="thinking-details">
+          <div className="thinking-material-list">
+            {thinkingMaterials.map((material, index) => (
+              <button className={`thinking-material${selectedMaterial === index ? ' selected' : ''}`} key={material.name} onClick={() => setSelectedMaterial(index)}>
+                <span className={`thinking-material-status${material.status === '未解析' ? ' warning' : ''}`} />
+                <span className="thinking-material-name">{material.name}</span>
+                <span className="thinking-material-state">{material.status}</span>
+                <ChevronRight size={13} strokeWidth={1.8} />
+              </button>
+            ))}
+          </div>
+          <div className="thinking-material-detail">
+            <span>材料明细</span>
+            <strong>{thinkingMaterials[selectedMaterial].name}</strong>
+            <p>{thinkingMaterials[selectedMaterial].detail}</p>
+          </div>
+        </div>
+      )}
+    </section>
+  )
 }
 
 export default function ConversationView({
@@ -216,7 +371,7 @@ export default function ConversationView({
                 <div className="message-avatar"><Bot size={15} strokeWidth={1.8} /></div>
                 <div className="message-content">
                   <div className="message-meta"><span>Nomos</span><span className="message-mode">{mode}</span></div>
-                  <div className="message-bubble typing-bubble"><span /><span /><span /> 正在整理证据与回答</div>
+                  <ThinkingPanel mode={mode} />
                 </div>
               </article>
             )}

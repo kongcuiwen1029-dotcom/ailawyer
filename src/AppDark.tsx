@@ -12,7 +12,6 @@ import {
   Search,
   FileSearch,
   FileSignature,
-  Sparkles,
 } from 'lucide-react'
 
 const quickActions = [
@@ -144,9 +143,6 @@ export default function AppDark({ activeNav, onActiveNavChange, onStartConversat
               <WorkspaceView view={activeNav} projects={projects} onOpenProject={onOpenProject} onNewProject={onNewProject} />
             )}
 
-            <button className="dk-utility-fab" aria-label="更多功能">
-              <Sparkles size={16} strokeWidth={1.8} color="#d98e5f" />
-            </button>
           </main>
 
         </div>

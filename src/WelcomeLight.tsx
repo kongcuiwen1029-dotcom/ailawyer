@@ -13,7 +13,6 @@ import {
   Search,
   FileSearch,
   Globe,
-  Sparkles,
   X,
 } from 'lucide-react'
 
@@ -187,9 +186,6 @@ export default function WelcomeLight({ activeNav, onActiveNavChange, onStartConv
             <WorkspaceView view={activeNav} projects={projects} onOpenProject={onOpenProject} onNewProject={onNewProject} />
           )}
 
-          <button className="al-utility-fab" aria-label="更多功能">
-            <Sparkles size={18} strokeWidth={1.8} color="#8b6cf0" />
-          </button>
         </main>
 
       </div>

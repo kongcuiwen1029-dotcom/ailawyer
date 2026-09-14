@@ -10,7 +10,6 @@ import {
   Scale,
   Search,
   FileSearch,
-  Sparkles,
   Paperclip,
   Globe,
   PanelLeftClose,
@@ -209,10 +208,6 @@ export default function WelcomeGray({ activeNav, onActiveNavChange, onStartConve
               <WorkspaceView view={activeNav} projects={projects} onOpenProject={onOpenProject} onNewProject={onNewProject} />
             )}
 
-            {/* FAB */}
-            <button className="gy-utility-fab" aria-label="更多功能">
-              <Sparkles size={16} strokeWidth={1.8} color="#8b6cf0" />
-            </button>
           </main>
 
         </div>
