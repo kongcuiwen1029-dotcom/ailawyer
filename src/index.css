@@ -1226,12 +1226,22 @@ body::after {
   box-shadow: var(--gy-shadow-md);
   overflow: hidden;
   margin-bottom: 22px;
-  transition: box-shadow 160ms ease, border-color 160ms ease;
+  transition: box-shadow 160ms ease;
 }
 
+/* Focus is carried by the shadow alone. It used to also swap the border to
+   #c8c8c8, which turned the white glass rim into a grey outline the moment you
+   clicked in — the rim is part of the glass, so it stays put and the shadow
+   deepens instead. The two inset highlights from --gy-shadow-md are repeated
+   here rather than dropped: this rule replaces the whole shadow, so omitting
+   them would flatten the top edge of the glass on focus, and then the state
+   change would be "the glass changed" rather than just a deeper shadow. */
 .gy-composer-wrap:focus-within {
-  border-color: #c8c8c8;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05), 0 8px 28px rgba(0,0,0,0.09);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.95),
+    inset 0 -1px 1px rgba(255,255,255,0.3),
+    0 10px 32px rgba(72,72,72,0.16),
+    0 2px 4px rgba(24,24,24,0.06);
 }
 
 /* Tall input body — tags stack above a left-aligned input */
@@ -1775,7 +1785,18 @@ body::after {
 .gy-main .wv-table td { border-bottom: 1px solid var(--gy-hairline); color: var(--gy-text); }
 .gy-main .wv-textarea { color: var(--gy-text); background: var(--gy-surface); border: 1px solid var(--gy-border); box-shadow: var(--gy-shadow-sm); }
 .gy-main .wv-textarea::placeholder { color: var(--gy-text-3); }
-.gy-main .wv-textarea:focus { border-color: #c8c8c8; }
+/* Same rule as the welcome composer: no grey ring on focus. The light and dark
+   themes signal focus with their own accent (violet / amber); grey has no
+   equivalent it is allowed to use, so it deepened the shadow — but left the
+   border swap to #c8c8c8 in as well, and a grey outline on grey glass reads as
+   dirt. The inset highlight is repeated because this rule replaces the whole
+   shadow, and dropping it would kill the glass's top edge on focus. */
+.gy-main .wv-textarea:focus {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.9),
+    0 2px 4px rgba(24,24,24,0.06),
+    0 6px 16px rgba(72,72,72,0.12);
+}
 .gy-main .wv-feedback-done { color: var(--gy-accent); }
 
 /* ═══════════════════════════════════════
