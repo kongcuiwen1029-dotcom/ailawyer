@@ -7,8 +7,8 @@ import ConversationView, {
   type ChatMessage,
   type ChatMode,
 } from './ConversationView'
-import { initialProjects, type Project } from './WorkspaceView'
 import type { ViewId } from './nav'
+import { TENANTS, WorkspaceProvider, useWorkspace, type Project } from './state/workspace'
 import WelcomeGray from './WelcomeGray'
 import WelcomeLight from './WelcomeLight'
 
@@ -20,7 +20,7 @@ const routeByShortcut: Record<string, ChatMode> = { consult: 'Direct', search: '
 const shortcutLabel: Record<string, string> = { consult: '法律咨询', search: '法律检索', review: '文件审查', contract: '合同起草' }
 const THINKING_DURATION_MS = 20000
 
-function responseFor(text: string, mode: ChatMode, project: Project): Pick<ChatMessage, 'text' | 'sources'> {
+function responseFor(text: string, mode: ChatMode, project: Project, tenant: string): Pick<ChatMessage, 'text' | 'sources'> {
   if (mode === 'Direct') {
     return { text: `收到。我会围绕「${text}」继续对话，只基于你提供的信息组织回答，不会把项目文件或外部资料当作已核验事实。你可以继续补充事实、目标或希望的输出格式。` }
   }
@@ -34,19 +34,28 @@ function responseFor(text: string, mode: ChatMode, project: Project): Pick<ChatM
     }
   }
   return {
-    text: `我会先把「${text}」拆成检索问题，再分别检查项目案卷与平台法律资料。初步建议会标注证据覆盖范围；如果需要外部信息，我会在调用 Connector 前单独提示并保留来源。`,
+    text: `我会先把「${text}」拆成检索问题，再分别检查项目案卷与平台法律资料。这次任务由「诉讼支持小组」的主管调度：${tenant} 租户当前启用中的员工组会拆解任务并委派成员，汇总后再统一交付；需要外部信息时会在调用 Connector 前单独提示并保留来源。`,
     sources: [
       { kind: '项目案卷', title: '项目案卷 / 已上传材料', detail: '项目私有证据 · 命中 2 条' },
       { kind: '全局 RAG', title: '民商法法规库', detail: '平台法律资料 · 命中 4 条' },
-      { kind: 'Connector', title: '北大法宝 MCP', detail: '治理连接器 · 尚未调用' },
+      { kind: 'Connector', title: '北大法宝 MCP', detail: '治理连接器 · 按需加载' },
     ],
   }
 }
 
 export default function App() {
+  return (
+    <WorkspaceProvider>
+      <AppShell />
+    </WorkspaceProvider>
+  )
+}
+
+function AppShell() {
+  const { projects, createProject, setProjectStatus, bumpProjectSessions } = useWorkspace()
   const [theme, setTheme] = useState<Theme>('light')
   const [activeNav, setActiveNav] = useState<ViewId>('new')
-  const [projects, setProjects] = useState<Project[]>(initialProjects)
+  const [tenant, setTenant] = useState(TENANTS[0])
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null)
   const [messagesByProject, setMessagesByProject] = useState<Record<string, ChatMessage[]>>({})
   const [generatingProjectId, setGeneratingProjectId] = useState<string | null>(null)
@@ -58,21 +67,19 @@ export default function App() {
     if (timerRef.current !== null) window.clearTimeout(timerRef.current)
     timerRef.current = null
     setGeneratingProjectId(null)
-    if (activeProjectId) {
-      setProjects(current => current.map(project => project.id === activeProjectId ? { ...project, status: { kind: 'warn', label: '已暂停' } } : project))
-    }
+    if (activeProjectId) setProjectStatus(activeProjectId, { kind: 'warn', label: '已暂停' })
   }
 
   function queueAssistant(projectId: string, text: string, mode: ChatMode, projectOverride?: Project) {
     setGeneratingProjectId(projectId)
-    setProjects(current => current.map(project => project.id === projectId ? { ...project, status: { kind: 'run', label: '生成中' } } : project))
+    setProjectStatus(projectId, { kind: 'run', label: '生成中' })
     // Keep the local demo long enough for the evidence stream to be legible.
     timerRef.current = window.setTimeout(() => {
       const project = projectOverride ?? projects.find(item => item.id === projectId)
       if (!project) return
-      const answer = responseFor(text, mode, project)
+      const answer = responseFor(text, mode, project, project.tenant ?? tenant)
       setMessagesByProject(current => ({ ...current, [projectId]: [...(current[projectId] ?? []), { id: `assistant-${Date.now()}`, role: 'assistant', mode, time: new Intl.DateTimeFormat('zh-CN', { hour: '2-digit', minute: '2-digit' }).format(new Date()), ...answer }] }))
-      setProjects(current => current.map(item => item.id === projectId ? { ...item, sessions: Math.max(item.sessions, 1), updated: '刚刚', status: { kind: 'ok', label: '已完成' } } : item))
+      bumpProjectSessions(projectId)
       setGeneratingProjectId(null)
       timerRef.current = null
     }, THINKING_DURATION_MS)
@@ -88,17 +95,11 @@ export default function App() {
     const label = shortcutId ? shortcutLabel[shortcutId] : undefined
     const text = input.trim() || (label ? `请帮我进行${label}` : '')
     if (!text) return
-    const projectId = `project-${Date.now()}`
-    const project: Project = {
-      id: projectId,
-      name: text.length > 24 ? `${text.slice(0, 24)}…` : text,
-      desc: label ? `${label}任务 · 首条问题已带入项目会话` : '由新建对话创建的法律项目，等待继续补充上下文。',
-      sessions: 1,
-      updated: '刚刚',
-      status: { kind: 'run', label: '生成中' },
-    }
+    const name = text.length > 24 ? `${text.slice(0, 24)}…` : text
+    const desc = label ? `${label}任务 · 首条问题已带入项目会话` : '由新建对话创建的法律项目，等待继续补充上下文。'
     const mode = (shortcutId && routeByShortcut[shortcutId]) || 'Direct'
-    setProjects(current => [project, ...current])
+    const projectId = createProject(name, desc, tenant)
+    const project: Project = { id: projectId, name, desc, sessions: 1, updated: '刚刚', tenant, status: { kind: 'run', label: '生成中' } }
     setMessagesByProject(current => ({ ...current, [projectId]: [createUserMessage(text, mode)] }))
     setActiveProjectId(projectId)
     setActiveNav('conversation')
@@ -129,7 +130,16 @@ export default function App() {
   }
 
   function renderTheme() {
-    const shared = { activeNav, onActiveNavChange: setActiveNav, onStartConversation: startConversation, projects, onOpenProject: openProject, onNewProject: newProject }
+    const shared = {
+      activeNav,
+      onActiveNavChange: setActiveNav,
+      onStartConversation: startConversation,
+      projects,
+      onOpenProject: openProject,
+      onNewProject: newProject,
+      tenant,
+      onTenantChange: setTenant,
+    }
     if (theme === 'dark') return <AppDark {...shared} />
     if (theme === 'gray') return <WelcomeGray {...shared} />
     return <WelcomeLight {...shared} />
@@ -139,7 +149,7 @@ export default function App() {
     <div style={{ width: '100%', height: '100%', position: 'relative' }}>
       {activeNav === 'conversation' && activeProject ? (
         <div className={`conversation-theme ${theme}`}>
-          <ConversationView project={activeProject} messages={activeMessages} isGenerating={generatingProjectId === activeProject.id} initialMode={activeMessages.find(message => message.mode)?.mode} onSendMessage={sendMessage} onStopGeneration={stopGeneration} onBack={() => setActiveNav('projects')} onNewConversation={newConversation} />
+          <ConversationView project={activeProject} messages={activeMessages} isGenerating={generatingProjectId === activeProject.id} initialMode={activeMessages.find(message => message.mode)?.mode} onSendMessage={sendMessage} onStopGeneration={stopGeneration} onBack={() => setActiveNav('projects')} onNewConversation={newConversation} onOpenTraces={() => setActiveNav('traces')} />
         </div>
       ) : renderTheme()}
       <button className={`theme-toggle ${theme}`} onClick={() => setTheme(value => nextTheme[value])} aria-label={themeLabel[theme]} title={themeLabel[theme]}>

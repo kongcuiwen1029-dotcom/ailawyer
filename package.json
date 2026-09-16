@@ -6,6 +6,9 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
+    "build:standalone": "vite build && node tools/build-standalone.mjs",
+    "build:silk": "vite build && node tools/build-silk.mjs",
+    "share": "vite build && node tools/build-standalone.mjs && node tools/share-address.mjs --start",
     "preview": "vite preview",
     "format": "oxfmt"
   },

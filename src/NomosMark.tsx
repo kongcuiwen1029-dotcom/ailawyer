@@ -13,7 +13,11 @@ export default function NomosMark({ size = 40 }: { size?: number }) {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        boxShadow: `0 ${size * 0.2}px ${size * 0.5}px rgba(101, 86, 172, 0.22)`,
+        // The cast is a token so the gray theme can make it neutral without
+        // touching the mark: that theme's backgrounds must carry no purple, and
+        // this shadow is the only purple that reaches one. Light and dark keep
+        // the purple glow via the fallback.
+        boxShadow: `0 ${size * 0.2}px ${size * 0.5}px var(--nomos-mark-glow, rgba(101, 86, 172, 0.22))`,
         flex: 'none',
       }}
     >

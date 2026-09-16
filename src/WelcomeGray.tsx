@@ -12,10 +12,12 @@ import {
   FileSearch,
   Paperclip,
   Globe,
+  Building2,
   PanelLeftClose,
   PanelLeftOpen,
   X,
 } from 'lucide-react'
+import { TENANTS } from './state/workspace'
 
 /* Gray theme uses conversational labels to match the reference */
 const grayLabels: Partial<Record<ViewId, string>> = {
@@ -23,6 +25,11 @@ const grayLabels: Partial<Record<ViewId, string>> = {
   projects: '我的项目',
 }
 
+/* Categorical accents, exempt from the theme's all-neutral rule because the four
+   icons have to stay tellable apart at 15px. Gray keeps its own four-hue set —
+   consult #4f7bff, search #f59042, review #22a06b, contract #8b6cf0 — rather
+   than the light theme's. The user asked for the gray theme's accents to stay
+   purple instead of being made achromatic (2026-09-15). */
 const quickActions = [
   { id: 'consult',  icon: Scale,      label: '法律咨询', color: '#4f7bff' },
   { id: 'search',   icon: Search,     label: '法律检索', color: '#f59042' },
@@ -37,9 +44,11 @@ type WelcomeGrayProps = {
   projects: Project[]
   onOpenProject: (project: Project) => void
   onNewProject: () => void
+  tenant: string
+  onTenantChange: (tenant: string) => void
 }
 
-export default function WelcomeGray({ activeNav, onActiveNavChange, onStartConversation, projects, onOpenProject, onNewProject }: WelcomeGrayProps) {
+export default function WelcomeGray({ activeNav, onActiveNavChange, onStartConversation, projects, onOpenProject, onNewProject, tenant, onTenantChange }: WelcomeGrayProps) {
   const [query, setQuery]         = useState('')
   const [tags, setTags]           = useState<string[]>([])
   const [collapsed, setCollapsed] = useState(false)
@@ -171,6 +180,12 @@ export default function WelcomeGray({ activeNav, onActiveNavChange, onStartConve
 
                   <div className="gy-composer-toolbar">
                     <div className="gy-composer-left">
+                      <label className="gy-chip as-select" title="当前租户">
+                        <Building2 size={13} strokeWidth={1.8} />
+                        <select value={tenant} onChange={event => onTenantChange(event.target.value)} aria-label="选择租户">
+                          {TENANTS.map(name => <option key={name} value={name}>{name}</option>)}
+                        </select>
+                      </label>
                       <button className="gy-chip" title="附件">
                         <Paperclip size={13} strokeWidth={1.8} />
                         <span>上传文件</span>
@@ -205,7 +220,7 @@ export default function WelcomeGray({ activeNav, onActiveNavChange, onStartConve
                 </div>
               </div>
             ) : (
-              <WorkspaceView view={activeNav} projects={projects} onOpenProject={onOpenProject} onNewProject={onNewProject} />
+              <WorkspaceView cardStyle="detail" view={activeNav} onOpenProject={onOpenProject} onNewProject={onNewProject} onNavigate={onActiveNavChange} />
             )}
 
           </main>
