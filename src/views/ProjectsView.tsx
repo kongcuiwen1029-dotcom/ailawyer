@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Briefcase, Clock, LayoutGrid, MessageSquare, Pencil, RotateCcw, Table as TableIcon, Trash2, Undo2 } from 'lucide-react'
-import { TENANTS, useWorkspace, type Project } from '../state/workspace'
+import { useWorkspace, type Project } from '../state/workspace'
 import { Badge, Empty, Field, Modal, Pager, ViewHead, usePaged } from '../ui/parts'
 import ProjectCard from '../ui/ProjectCard'
 
@@ -12,7 +12,6 @@ export default function ProjectsView({ onOpenProject, onNewProject, cardStyle = 
   const { projects, renameProject, deleteProject, restoreProject, purgeProject, emptyRecycleBin } = useWorkspace()
   const [mode, setMode] = useState<'card' | 'table'>('card')
   const [tab, setTab] = useState<'active' | 'recycle'>('active')
-  const [tenant, setTenant] = useState('全部租户')
   const [query, setQuery] = useState('')
   const [renaming, setRenaming] = useState<Project | null>(null)
   const [renameValue, setRenameValue] = useState('')
@@ -21,10 +20,9 @@ export default function ProjectsView({ onOpenProject, onNewProject, cardStyle = 
   const scoped = useMemo(() => projects.filter(project => tab === 'recycle' ? Boolean(project.deletedAt) : !project.deletedAt), [projects, tab])
 
   const visible = useMemo(() => scoped.filter(project => {
-    if (tenant !== '全部租户' && project.tenant !== tenant) return false
     if (query.trim() && !`${project.name}${project.desc}`.toLowerCase().includes(query.trim().toLowerCase())) return false
     return true
-  }), [scoped, tenant, query])
+  }), [scoped, query])
 
   const { page, setPage, pageCount, pageItems, total } = usePaged(visible, 6)
 
@@ -52,10 +50,6 @@ export default function ProjectsView({ onOpenProject, onNewProject, cardStyle = 
           <button className={`wv-tab${tab === 'recycle' ? ' active' : ''}`} onClick={() => { setTab('recycle'); setPage(1) }}>回收站</button>
         </div>
         <input className="wv-input" placeholder="搜索项目名称或说明" value={query} onChange={event => { setQuery(event.target.value); setPage(1) }} />
-        <select className="wv-select" value={tenant} onChange={event => { setTenant(event.target.value); setPage(1) }}>
-          <option>全部租户</option>
-          {TENANTS.map(name => <option key={name}>{name}</option>)}
-        </select>
         {tab === 'recycle' && (
           <button className="wv-btn danger" disabled={!scoped.length} onClick={emptyRecycleBin}>
             <Trash2 size={13} strokeWidth={1.9} /> 清空回收站
@@ -86,7 +80,6 @@ export default function ProjectsView({ onOpenProject, onNewProject, cardStyle = 
               <div className="wv-card-meta">
                 <span><MessageSquare size={13} strokeWidth={1.8} /> {project.sessions} 会话</span>
                 <span><Clock size={13} strokeWidth={1.8} /> {project.updated}</span>
-                <span className="wv-card-tenant">{project.tenant}</span>
               </div>
               <div className="wv-card-actions">
                 <button className="wv-btn ghost" onClick={event => { event.stopPropagation(); setRenaming(project); setRenameValue(project.name) }}>
@@ -104,13 +97,12 @@ export default function ProjectsView({ onOpenProject, onNewProject, cardStyle = 
       {tab === 'active' && mode === 'table' && (
         <table className="wv-table">
           <thead>
-            <tr><th>项目名称</th><th>租户</th><th>会话</th><th>更新时间</th><th>状态</th><th>操作</th></tr>
+            <tr><th>项目名称</th><th>会话</th><th>更新时间</th><th>状态</th><th>操作</th></tr>
           </thead>
           <tbody>
             {pageItems.map(project => (
               <tr key={project.id} onClick={() => onOpenProject(project)} className="wv-click-row">
                 <td style={{ fontWeight: 600 }}>{project.name}</td>
-                <td>{project.tenant}</td>
                 <td>{project.sessions}</td>
                 <td>{project.updated}</td>
                 <td><Badge kind={project.status.kind}>{project.status.label}</Badge></td>
@@ -129,13 +121,12 @@ export default function ProjectsView({ onOpenProject, onNewProject, cardStyle = 
       {tab === 'recycle' && (
         <table className="wv-table">
           <thead>
-            <tr><th>项目名称</th><th>租户</th><th>删除时间</th><th>保留</th><th>操作</th></tr>
+            <tr><th>项目名称</th><th>删除时间</th><th>保留</th><th>操作</th></tr>
           </thead>
           <tbody>
             {pageItems.map(project => (
               <tr key={project.id}>
                 <td style={{ fontWeight: 600 }}>{project.name}</td>
-                <td>{project.tenant}</td>
                 <td>{project.deletedAt}</td>
                 <td>30 天后自动清理</td>
                 <td>

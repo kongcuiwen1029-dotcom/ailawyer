@@ -55,7 +55,9 @@ function AppShell() {
   const { projects, createProject, setProjectStatus, bumpProjectSessions } = useWorkspace()
   const [theme, setTheme] = useState<Theme>('light')
   const [activeNav, setActiveNav] = useState<ViewId>('new')
-  const [tenant, setTenant] = useState(TENANTS[0])
+  // The composer's tenant picker is gone, so there is nothing left to switch this.
+  // New projects still record a tenant and the reply text still names one.
+  const tenant = TENANTS[0]
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null)
   const [messagesByProject, setMessagesByProject] = useState<Record<string, ChatMessage[]>>({})
   const [generatingProjectId, setGeneratingProjectId] = useState<string | null>(null)
@@ -137,8 +139,6 @@ function AppShell() {
       projects,
       onOpenProject: openProject,
       onNewProject: newProject,
-      tenant,
-      onTenantChange: setTenant,
     }
     if (theme === 'dark') return <AppDark {...shared} />
     if (theme === 'gray') return <WelcomeGray {...shared} />

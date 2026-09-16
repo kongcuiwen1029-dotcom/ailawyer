@@ -12,9 +12,7 @@ import {
   Search,
   FileSearch,
   FileSignature,
-  Building2,
 } from 'lucide-react'
-import { TENANTS } from './state/workspace'
 
 const quickActions = [
   { id: 'consult',  icon: Scale,         label: '法律咨询' },
@@ -30,11 +28,9 @@ type AppDarkProps = {
   projects: Project[]
   onOpenProject: (project: Project) => void
   onNewProject: () => void
-  tenant: string
-  onTenantChange: (tenant: string) => void
 }
 
-export default function AppDark({ activeNav, onActiveNavChange, onStartConversation, projects, onOpenProject, onNewProject, tenant, onTenantChange }: AppDarkProps) {
+export default function AppDark({ activeNav, onActiveNavChange, onStartConversation, projects, onOpenProject, onNewProject }: AppDarkProps) {
   const [query, setQuery] = useState('')
   const [selectedShortcut, setSelectedShortcut] = useState<string | undefined>()
   const [collapsed, setCollapsed] = useState(false)
@@ -116,12 +112,6 @@ export default function AppDark({ activeNav, onActiveNavChange, onStartConversat
 
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, position: 'relative', zIndex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <label className="dk-chip as-select" title="当前租户">
-                          <Building2 size={14} strokeWidth={1.8} />
-                          <select value={tenant} onChange={event => onTenantChange(event.target.value)} aria-label="选择租户">
-                            {TENANTS.map(name => <option key={name} value={name}>{name}</option>)}
-                          </select>
-                        </label>
                         <div className="dk-chip">
                           <Database size={14} strokeWidth={1.8} />
                           <span>知识库</span>
@@ -151,13 +141,13 @@ export default function AppDark({ activeNav, onActiveNavChange, onStartConversat
                   </div>
 
                   <p className="dk-hero-hint">
-                    {tenant} · {projects.filter(project => !project.deletedAt && project.tenant === tenant).length} 个项目可用 ·
+                    {projects.filter(project => !project.deletedAt).length} 个项目可用 ·
                     项目对话由启用中的员工组主管统一拆解与调度
                   </p>
                 </div>
               </section>
             ) : (
-              <WorkspaceView view={activeNav} onOpenProject={onOpenProject} onNewProject={onNewProject} onNavigate={onActiveNavChange} />
+              <WorkspaceView cardStyle="detail" view={activeNav} onOpenProject={onOpenProject} onNewProject={onNewProject} onNavigate={onActiveNavChange} />
             )}
 
           </main>

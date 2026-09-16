@@ -3,7 +3,7 @@ import { FolderOpen, MessageSquare, MoreHorizontal, Pencil, Trash2 } from 'lucid
 import type { Project } from '../state/workspace'
 
 /* 卡片只承载服务端 `Project` 真正有的字段：名称、案件类型、摘要、最近编辑时间，
-   加上原型自身的会话数与租户。菜单与真实应用一致（打开 / 重命名 / 删除），
+   加上原型自身的会话数。菜单与真实应用一致（打开 / 重命名 / 删除），
    删除走回收站而不是物理删除。 */
 export default function ProjectCard({
   project,
@@ -76,10 +76,11 @@ export default function ProjectCard({
       </div>
 
       <h3 className="wv-card-title">{project.name}</h3>
-      <div className="wv-pcard-subline">
-        {project.caseType && <span className="wv-pcard-case-type">{project.caseType}</span>}
-        <span className="wv-pcard-tenant">{project.tenant}</span>
-      </div>
+      {project.caseType && (
+        <div className="wv-pcard-subline">
+          <span className="wv-pcard-case-type">{project.caseType}</span>
+        </div>
+      )}
       <p className="wv-pcard-desc">{project.desc || '暂无摘要'}</p>
 
       <div className="wv-pcard-foot">

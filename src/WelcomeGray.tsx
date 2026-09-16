@@ -12,12 +12,10 @@ import {
   FileSearch,
   Paperclip,
   Globe,
-  Building2,
   PanelLeftClose,
   PanelLeftOpen,
   X,
 } from 'lucide-react'
-import { TENANTS } from './state/workspace'
 
 /* Gray theme uses conversational labels to match the reference */
 const grayLabels: Partial<Record<ViewId, string>> = {
@@ -44,11 +42,9 @@ type WelcomeGrayProps = {
   projects: Project[]
   onOpenProject: (project: Project) => void
   onNewProject: () => void
-  tenant: string
-  onTenantChange: (tenant: string) => void
 }
 
-export default function WelcomeGray({ activeNav, onActiveNavChange, onStartConversation, projects, onOpenProject, onNewProject, tenant, onTenantChange }: WelcomeGrayProps) {
+export default function WelcomeGray({ activeNav, onActiveNavChange, onStartConversation, projects, onOpenProject, onNewProject }: WelcomeGrayProps) {
   const [query, setQuery]         = useState('')
   const [tags, setTags]           = useState<string[]>([])
   const [collapsed, setCollapsed] = useState(false)
@@ -180,12 +176,6 @@ export default function WelcomeGray({ activeNav, onActiveNavChange, onStartConve
 
                   <div className="gy-composer-toolbar">
                     <div className="gy-composer-left">
-                      <label className="gy-chip as-select" title="当前租户">
-                        <Building2 size={13} strokeWidth={1.8} />
-                        <select value={tenant} onChange={event => onTenantChange(event.target.value)} aria-label="选择租户">
-                          {TENANTS.map(name => <option key={name} value={name}>{name}</option>)}
-                        </select>
-                      </label>
                       <button className="gy-chip" title="附件">
                         <Paperclip size={13} strokeWidth={1.8} />
                         <span>上传文件</span>

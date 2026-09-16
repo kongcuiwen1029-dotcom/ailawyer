@@ -13,10 +13,8 @@ import {
   Search,
   FileSearch,
   Globe,
-  Building2,
   X,
 } from 'lucide-react'
-import { TENANTS } from './state/workspace'
 
 /* Purple theme uses the same conversational labels as the gray theme */
 const purpleLabels: Partial<Record<ViewId, string>> = {
@@ -38,11 +36,9 @@ type WelcomeLightProps = {
   projects: Project[]
   onOpenProject: (project: Project) => void
   onNewProject: () => void
-  tenant: string
-  onTenantChange: (tenant: string) => void
 }
 
-export default function WelcomeLight({ activeNav, onActiveNavChange, onStartConversation, projects, onOpenProject, onNewProject, tenant, onTenantChange }: WelcomeLightProps) {
+export default function WelcomeLight({ activeNav, onActiveNavChange, onStartConversation, projects, onOpenProject, onNewProject }: WelcomeLightProps) {
   const [query, setQuery] = useState('')
   const [tags, setTags] = useState<string[]>([])
   const [collapsed, setCollapsed] = useState(false)
@@ -153,12 +149,6 @@ export default function WelcomeLight({ activeNav, onActiveNavChange, onStartConv
 
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                     <div style={{ display: 'flex', gap: 8 }}>
-                      <label className="al-chip as-select" title="当前租户">
-                        <Building2 size={14} strokeWidth={1.8} />
-                        <select value={tenant} onChange={event => onTenantChange(event.target.value)} aria-label="选择租户">
-                          {TENANTS.map(name => <option key={name} value={name}>{name}</option>)}
-                        </select>
-                      </label>
                       <button className="al-chip" title="附件">
                         <Paperclip size={14} strokeWidth={1.8} />
                         <span>上传文件</span>
@@ -192,13 +182,13 @@ export default function WelcomeLight({ activeNav, onActiveNavChange, onStartConv
                 </div>
 
                 <p className="al-hero-hint">
-                  {tenant} · {projects.filter(project => !project.deletedAt && project.tenant === tenant).length} 个项目可用 ·
+                  {projects.filter(project => !project.deletedAt).length} 个项目可用 ·
                   项目对话由启用中的员工组主管统一拆解与调度
                 </p>
               </div>
             </section>
           ) : (
-            <WorkspaceView view={activeNav} onOpenProject={onOpenProject} onNewProject={onNewProject} onNavigate={onActiveNavChange} />
+            <WorkspaceView cardStyle="detail" view={activeNav} onOpenProject={onOpenProject} onNewProject={onNewProject} onNavigate={onActiveNavChange} />
           )}
 
         </main>
