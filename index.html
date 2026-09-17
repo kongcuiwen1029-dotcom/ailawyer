@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <!-- figma:head-start -->
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nomos · AI 律师工作台</title>
+    <!-- figma:head-end -->
+  </head>
+  <body>
+    <!-- figma:body-start -->
+    <div id="root"></div>
+    <script>
+      // Every single-file build is a sibling of this shell's dist output, so a
+      // file:// open of any of them must be allowed through. A build whose name
+      // is missing here does not fail loudly — it silently redirects to
+      // nomos-standalone.html and you end up measuring the wrong theme.
+      const BUILT = ['nomos-standalone.html', 'nomos-figma.html', 'nomos-silk.html']
+      if (window.location.protocol === 'file:' && !BUILT.some(name => window.location.pathname.endsWith(name))) {
+        window.location.replace('./nomos-standalone.html')
+      }
+    </script>
+    <script type="module" src="/src/main.tsx"></script>
+    <!-- figma:body-end -->
+  </body>
+</html>
