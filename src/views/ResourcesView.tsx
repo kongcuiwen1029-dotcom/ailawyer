@@ -1,16 +1,21 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
   AlertTriangle,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   Cpu,
   Database,
   FileText,
+  Minus,
   Plug,
   Plus,
   Play,
   Search,
   Server,
   ShieldAlert,
+  Sparkles,
+  Trash2,
   Upload,
   Workflow,
   Wrench,
@@ -22,7 +27,7 @@ import {
   type ResourceKind,
   type SopNode,
 } from '../state/workspace'
-import { Badge, DetailShell, Empty, Field, Modal, Pager, Section, ViewHead, usePaged } from '../ui/parts'
+import { Badge, DetailShell, Drawer, Empty, Field, Modal, Pager, Section, ViewHead, usePaged } from '../ui/parts'
 
 const TABS: { id: ResourceKind; label: string; icon: typeof Database }[] = [
   { id: 'kb', label: '知识库', icon: Database },
@@ -153,97 +158,459 @@ function resourceMeta(resource: GovernanceResource) {
 /* ───────────────────────── detail ───────────────────────── */
 
 function ResourceDetail({ resource, onBack }: { resource: GovernanceResource; onBack: () => void }) {
-  const { toggleResourcePublished } = useWorkspace()
+  const { toggleResourcePublished, deleteResource } = useWorkspace()
+  const [detailsOpen, setDetailsOpen] = useState(false)
+  const [confirming, setConfirming] = useState(false)
   const blocked = resource.kind === 'sop' && (resource.validationErrors?.length ?? 0) > 0
 
   return (
-    <DetailShell
-      title={resource.name}
-      subtitle={`${resource.key} · 负责人 ${resource.owner} · 更新于 ${resource.updated} · revision r${resource.revision}`}
-      badges={
-        <>
-          <Badge kind={resource.published ? 'ok' : 'draft'}>{resource.published ? '已发布' : '未发布'}</Badge>
-          {blocked && <Badge kind="warn">校验未通过</Badge>}
-        </>
-      }
-      actions={
-        <>
-          <button className="wv-btn" onClick={() => toggleResourcePublished(resource.id)}>{resource.published ? '取消发布' : '发布'}</button>
-        </>
-      }
-      onBack={onBack}
-    >
-      <p className="wv-note">{resource.summary}</p>
+    <>
+      <DetailShell
+        crumbs={
+          <>
+            <button type="button" onClick={onBack}>资源市场</button>
+            <span className="wv-crumb-sep" aria-hidden="true">›</span>
+            <button type="button" onClick={onBack}>{KIND_TITLE[resource.kind]}</button>
+            <span className="wv-crumb-sep" aria-hidden="true">›</span>
+            <span className="wv-crumb-here" title={resource.name}>{resource.name}</span>
+          </>
+        }
+        title={resource.name}
+        subtitle={`${resource.key} · 负责人 ${resource.owner} · 更新于 ${resource.updated} · revision r${resource.revision}`}
+        badges={
+          <>
+            <Badge kind={resource.published ? 'ok' : 'draft'}>{resource.published ? '已发布' : '未发布'}</Badge>
+            {blocked && <Badge kind="warn">校验未通过</Badge>}
+          </>
+        }
+        actions={
+          <>
+            <button className="wv-btn" onClick={() => toggleResourcePublished(resource.id)}>{resource.published ? '取消发布' : '发布'}</button>
+            <button className="wv-btn" onClick={() => setDetailsOpen(true)}>详情</button>
+            <button
+              className="wv-btn ghost danger"
+              disabled={resource.published}
+              title={resource.published ? '已发布的资源不能删除，请先取消发布' : undefined}
+              onClick={() => setConfirming(true)}
+            >
+              删除
+            </button>
+          </>
+        }
+        onBack={onBack}
+      >
+        {resource.kind === 'kb' && <KnowledgeBaseDetail resource={resource} />}
+        {resource.kind === 'skill' && <SkillDetail resource={resource} />}
+        {resource.kind === 'connector' && <ConnectorDetail resource={resource} />}
+        {resource.kind === 'sop' && <SopDetail resource={resource} />}
+        {resource.kind === 'model' && <ModelDetail resource={resource} />}
+      </DetailShell>
 
-      {resource.kind === 'kb' && <KnowledgeBaseDetail resource={resource} />}
-      {resource.kind === 'skill' && <SkillDetail resource={resource} />}
-      {resource.kind === 'connector' && <ConnectorDetail resource={resource} />}
-      {resource.kind === 'sop' && <SopDetail resource={resource} />}
-      {resource.kind === 'model' && <ModelDetail resource={resource} />}
-    </DetailShell>
+      {detailsOpen && <ResourceMetaSheet resource={resource} onClose={() => setDetailsOpen(false)} />}
+
+      {confirming && (
+        <Modal
+          title="删除资源"
+          desc="删除后无法恢复，请确认这个资源已经不再需要。"
+          onClose={() => setConfirming(false)}
+          footer={
+            <>
+              <button className="wv-btn" onClick={() => setConfirming(false)}>取消</button>
+              <button
+                className="wv-btn danger"
+                onClick={() => { setConfirming(false); deleteResource(resource.id); onBack() }}
+              >
+                确认删除
+              </button>
+            </>
+          }
+        >
+          <p className="wv-note" style={{ marginTop: 0 }}>「{resource.name}」会从资源市场移除；已绑定它的数字员工会同时解除绑定。</p>
+        </Modal>
+      )}
+    </>
+  )
+}
+
+/* 资源元数据抽屉，对应真实应用资源详情页 Header 上的「详情」按钮。字段只取原型数据
+   模型里真有的：基本信息那五条与真实应用那张 Sheet 一一对应，「内容修订」对应
+   `revision`、「更新时间」对应 `updated`。真实应用的 Sheet 另有创建时间与发布
+   时间，原型没有这两个字段，这里就不显示，也不另造演示值。 */
+function ResourceMetaSheet({ resource, onClose }: { resource: GovernanceResource; onClose: () => void }) {
+  const kind = KIND_TITLE[resource.kind]
+  return (
+    <Drawer title={`${kind}详情`} desc={`查看当前${kind}的编辑、发布和内容修订信息。`} onClose={onClose}>
+      <div className="wv-meta-group">
+        <h3>基本信息</h3>
+        <dl className="wv-meta-list">
+          <MetaRow label="名称" value={resource.name} />
+          <MetaRow label="资源标识" value={resource.key} />
+          <MetaRow label="描述" value={resource.summary || '暂无描述'} />
+          <MetaRow label="资源 ID" value={resource.id} />
+          <MetaRow label="所有者" value={resource.owner} />
+        </dl>
+      </div>
+
+      <div className="wv-meta-group">
+        <h3>编辑与发布</h3>
+        <dl className="wv-meta-list">
+          <div className="wv-meta-row">
+            <dt>发布状态</dt>
+            <dd><Badge kind={resource.published ? 'ok' : 'draft'}>{resource.published ? '已发布' : '未发布'}</Badge></dd>
+          </div>
+          <MetaRow label="内容修订" value={`#${resource.revision}`} />
+          <MetaRow label="更新时间" value={resource.updated} />
+        </dl>
+        {/* 真实应用把这句话夹在「发布状态」与「内容修订」之间，这里挪到列表末尾：一句话
+            插在中间会把字段列表切成两张卡，第一张只剩孤零零一行。字段的内容和先后都没变。 */}
+        {resource.kind === 'kb' && (
+          <p className="wv-meta-note">文件上传或移除时会同步更新当前结构；发布只切换在线状态。</p>
+        )}
+      </div>
+    </Drawer>
+  )
+}
+
+function MetaRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="wv-meta-row">
+      <dt>{label}</dt>
+      <dd>{value}</dd>
+    </div>
   )
 }
 
 /* ── 知识库 ── */
 
+/* 知识库详情的正文工作区，对齐真实应用的三栏：左「文件」、中「文件名 + 正文」、
+   右「文件问答」，两条分隔条都能拖。宽度取真实应用那套默认值与上下限（左 17rem
+   / 13–30rem，右 22rem / 18–44rem），中栏自适应；左栏可以折成一条窄列，折起来
+   还要留宽度——不然展开按钮自己没有落脚的地方。 */
+const FILES_DEFAULT = 272
+const FILES_MIN = 208
+const FILES_MAX = 480
+const FILES_COLLAPSED = 44
+const CHAT_DEFAULT = 352
+const CHAT_MIN = 288
+const CHAT_MAX = 704
+
+interface WorkspaceMessage {
+  id: string
+  role: 'user' | 'assistant'
+  text: string
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value))
+}
+
+/** 拖动分隔条。用指针增量改宽度，上下限交给调用方——两个分隔条方向相反，
+    钳制规则只能由持有那个宽度的地方给。 */
+function Divider({ label, gap, onDrag }: { label: string; gap?: boolean; onDrag: (deltaX: number) => void }) {
+  return (
+    <div
+      className={`wv-ws-divider${gap ? ' gap' : ''}`}
+      role="separator"
+      aria-orientation="vertical"
+      aria-label={label}
+      onPointerDown={event => {
+        event.preventDefault()
+        let last = event.clientX
+        const move = (moveEvent: PointerEvent) => {
+          onDrag(moveEvent.clientX - last)
+          last = moveEvent.clientX
+        }
+        const stop = () => {
+          window.removeEventListener('pointermove', move)
+          window.removeEventListener('pointerup', stop)
+          document.body.classList.remove('wv-resizing')
+        }
+        window.addEventListener('pointermove', move)
+        window.addEventListener('pointerup', stop)
+        document.body.classList.add('wv-resizing')
+      }}
+    />
+  )
+}
+
+/* 原型不装 markdown 渲染器，这里按行做最小渲染：`#` 标题、`- ` 列表、`> ` 引用，
+   其余按段落。非 .md 的文件（.txt）一律走 `pre` 保留原始排版，真实应用也是这么分的。 */
+function DocumentBody({ name, content }: { name: string; content: string }) {
+  if (!/\.md$/i.test(name)) return <pre className="wv-ws-pre">{content}</pre>
+
+  const lines = content.split('\n').map(line => line.trim())
+  const blocks: ReactNode[] = []
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index]
+    if (line.startsWith('- ')) {
+      const items: string[] = []
+      while (index < lines.length && lines[index].startsWith('- ')) {
+        items.push(lines[index].slice(2))
+        index += 1
+      }
+      index -= 1
+      blocks.push(<ul key={`ul-${index}`}>{items.map((item, itemIndex) => <li key={itemIndex}>{item}</li>)}</ul>)
+      continue
+    }
+    if (!line) continue
+    if (line.startsWith('### ')) blocks.push(<h4 key={index}>{line.slice(4)}</h4>)
+    else if (line.startsWith('## ')) blocks.push(<h3 key={index}>{line.slice(3)}</h3>)
+    else if (line.startsWith('# ')) blocks.push(<h2 key={index}>{line.slice(2)}</h2>)
+    else if (line.startsWith('> ')) blocks.push(<blockquote key={index}>{line.slice(2)}</blockquote>)
+    else blocks.push(<p key={index}>{line}</p>)
+  }
+
+  return <div className="wv-ws-doc">{blocks}</div>
+}
+
 function KnowledgeBaseDetail({ resource }: { resource: GovernanceResource }) {
   const { addKnowledgeFile, removeKnowledgeFile, notify } = useWorkspace()
-  const inputRef = useRef<HTMLInputElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const folderInputRef = useRef<HTMLInputElement>(null)
   const files = resource.files ?? []
+  const [selected, setSelected] = useState<string | null>(files[0]?.name ?? null)
+  const [filesWidth, setFilesWidth] = useState(FILES_DEFAULT)
+  const [chatWidth, setChatWidth] = useState(CHAT_DEFAULT)
+  const [filesOpen, setFilesOpen] = useState(true)
+  const [uploadOpen, setUploadOpen] = useState(false)
+  const [removing, setRemoving] = useState<string | null>(null)
+  const [question, setQuestion] = useState('')
+  const [thread, setThread] = useState<WorkspaceMessage[]>([])
+  const [aiOpen, setAiOpen] = useState(false)
+  const [aiQuestion, setAiQuestion] = useState('')
+  const [aiThread, setAiThread] = useState<WorkspaceMessage[]>([])
 
-  function handleFiles(list: FileList | null) {
-    if (!list) return
+  const current = files.find(file => file.name === selected) ?? null
+
+  /* 当前选中的文件被删掉（或换了一个知识库）时退回第一个文件，真实应用同样是这个
+     行为——否则中栏会停在一个已经不存在的文件名上。 */
+  useEffect(() => {
+    if (selected && files.some(file => file.name === selected)) return
+    setSelected(files[0]?.name ?? null)
+  }, [files, selected])
+
+  async function handleFiles(list: FileList | null) {
+    if (!list?.length) return
     const batch = new Map<string, File>()
     Array.from(list).forEach(file => {
-      const allowed = /\.(md|txt)$/i.test(file.name)
-      if (!allowed) {
-        notify(`「${file.name}」不是 .md 或 .txt，已拒绝上传。`, 'warn')
+      /* 目录上传带出 webkitRelativePath，丢掉第一段目录名——真实应用只保留根目录
+         以内的相对路径，原型照做，否则 Skill 那类带路径的文件名会多一层壳。 */
+      const path = file.webkitRelativePath ? file.webkitRelativePath.slice(file.webkitRelativePath.indexOf('/') + 1) : file.name
+      if (!path) return
+      if (!/\.(md|txt)$/i.test(path)) {
+        notify(`「${path}」不是 .md 或 .txt，已拒绝上传。`, 'warn')
         return
       }
       if (file.size > 5 * 1024 * 1024) {
-        notify(`「${file.name}」超过 5 MiB 单文件上限，已拒绝上传。`, 'warn')
+        notify(`「${path}」超过 5 MiB 单文件上限，已拒绝上传。`, 'warn')
         return
       }
-      batch.set(file.name, file)
+      batch.set(path, file)
     })
-    batch.forEach(file => addKnowledgeFile(resource.id, file.name, `${Math.max(1, Math.round(file.size / 1024))} KB`))
+    for (const [path, file] of batch) {
+      addKnowledgeFile(resource.id, path, `${Math.max(1, Math.round(file.size / 1024))} KB`, await file.text())
+    }
+  }
+
+  /* 演示回复只说这一轮会怎么执行，不声称检索到了什么。真实执行才会产生来源与引用
+     位置，原型编一份出来就等于伪造证据链。 */
+  function ask(target: 'panel' | 'float') {
+    const value = target === 'panel' ? question : aiQuestion
+    const text = value.trim()
+    if (!text) return
+    if (target === 'panel') setQuestion('')
+    else setAiQuestion('')
+    const reply = target === 'panel'
+      ? '已收到。这一轮按 1024 token、90 秒、最多 8 步的预算在当前知识库内检索，命中的来源文件与段落位置会随答案标注；原型不执行真实检索，所以这里不返回具体条文。'
+      : '已收到。这个会话说明当前知识库的用法——添加资料、整理结构与发布流程，它不上传文件也不修改知识库；原型不接模型，所以这里不返回生成结果。'
+    const push = (current: WorkspaceMessage[]) => [
+      ...current,
+      { id: `q-${Date.now()}`, role: 'user' as const, text },
+      { id: `a-${Date.now()}`, role: 'assistant' as const, text: reply },
+    ]
+    if (target === 'panel') setThread(push)
+    else setAiThread(push)
   }
 
   return (
     <>
-      <Section
-        title="知识库文件"
-        hint="只接受 .md 与 .txt，单文件不超过 5 MiB；文本切分与向量化由平台自动完成。"
-        action={
-          <>
-            <input ref={inputRef} type="file" accept=".md,.txt" multiple hidden onChange={event => { handleFiles(event.target.files); event.target.value = '' }} />
-            <button className="wv-btn primary" onClick={() => inputRef.current?.click()}><Upload size={13} strokeWidth={1.9} /> 上传文件</button>
-          </>
-        }
-      >
-        {!files.length && <Empty text="还没有文件，上传后员工才能检索到内容。" />}
-        <div className="wv-list tight">
-          {files.map(file => (
-            <div className="wv-row" key={file.name}>
-              <div className="wv-ico"><FileText size={16} strokeWidth={1.8} /></div>
-              <div className="wv-row-main">
-                <p className="wv-row-title">{file.name} {file.parsed ? <Badge kind="ok">已解析</Badge> : <Badge kind="warn">等待解析</Badge>}</p>
-                <p className="wv-row-sub">{file.size} · 上传于 {file.uploadedAt}</p>
-              </div>
-              <div className="wv-row-actions">
-                <button className="wv-btn ghost danger" onClick={() => removeKnowledgeFile(resource.id, file.name)}>删除</button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </Section>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".md,.txt"
+        multiple
+        hidden
+        onChange={event => { handleFiles(event.target.files); event.target.value = '' }}
+      />
+      <input
+        ref={folderInputRef}
+        type="file"
+        hidden
+        {...{ webkitdirectory: '', directory: '' }}
+        onChange={event => { handleFiles(event.target.files); event.target.value = '' }}
+      />
 
-      <Section title="员工侧可见范围" hint="知识库对员工只暴露只读工作区工具，不提供写入与执行能力。">
-        <div className="wv-chips">
-          {['stat', 'list_files', 'read_file', 'grep'].map(tool => <span className="wv-chip2" key={tool}>{tool}</span>)}
-        </div>
-        <p className="wv-note">会话内的知识库问答按 1024 token、90 秒、最多 8 步的固定预算执行；超时或超步会显式返回错误，不做隐式重试。</p>
-      </Section>
+      <div className="wv-workspace">
+        <section
+          className="wv-ws-pane wv-ws-files"
+          style={{ width: filesOpen ? filesWidth : FILES_COLLAPSED }}
+          aria-label="知识库文件"
+        >
+          {filesOpen ? (
+            <>
+              <header className="wv-ws-head">
+                <h2>文件</h2>
+                <div className="wv-ws-head-actions">
+                  <div className="wv-ws-menu">
+                    <button
+                      className="wv-icon-btn"
+                      aria-label="上传文件"
+                      aria-expanded={uploadOpen}
+                      onClick={() => setUploadOpen(open => !open)}
+                    >
+                      <Upload size={14} strokeWidth={2} />
+                    </button>
+                    {uploadOpen && (
+                      <>
+                        <button className="wv-ws-scrim" aria-label="关闭上传菜单" onClick={() => setUploadOpen(false)} />
+                        <div className="wv-menu">
+                          <button onClick={() => { setUploadOpen(false); fileInputRef.current?.click() }}>上传文件</button>
+                          <button onClick={() => { setUploadOpen(false); folderInputRef.current?.click() }}>上传文件夹</button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                  <button className="wv-icon-btn" aria-label="折叠文件面板" onClick={() => setFilesOpen(false)}>
+                    <ChevronLeft size={14} strokeWidth={2} />
+                  </button>
+                </div>
+              </header>
+
+              <div className="wv-ws-scroll">
+                {!files.length && <Empty text="暂无文件" />}
+                {files.map(file => (
+                  <div className={`wv-ws-file${file.name === selected ? ' active' : ''}`} key={file.name}>
+                    <button
+                      className="wv-ws-file-main"
+                      onClick={() => setSelected(file.name)}
+                      title={`${file.name} · ${file.size} · ${file.parsed ? '已解析' : '等待解析'}`}
+                    >
+                      <FileText size={13} strokeWidth={1.9} />
+                      <span className="wv-ws-file-name">{file.name}</span>
+                    </button>
+                    {removing === file.name ? (
+                      <>
+                        <button className="wv-btn ghost danger" onClick={() => { setRemoving(null); removeKnowledgeFile(resource.id, file.name) }}>确认</button>
+                        <button className="wv-btn ghost" onClick={() => setRemoving(null)}>取消</button>
+                      </>
+                    ) : (
+                      <button className="wv-icon-btn wv-ws-file-del" aria-label={`删除 ${file.name}`} onClick={() => setRemoving(file.name)}>
+                        <Trash2 size={13} strokeWidth={1.9} />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="wv-ws-collapsed">
+              <button className="wv-icon-btn" aria-label="展开文件面板" onClick={() => setFilesOpen(true)}>
+                <ChevronRight size={14} strokeWidth={2} />
+              </button>
+            </div>
+          )}
+        </section>
+
+        <Divider label="调整文件面板宽度" onDrag={delta => setFilesWidth(width => clamp(width + delta, FILES_MIN, FILES_MAX))} />
+
+        <section className="wv-ws-pane wv-ws-preview" aria-label="知识库文件预览">
+          <header className="wv-ws-head">
+            <FileText size={13} strokeWidth={1.9} />
+            <h2>{current?.name ?? '文件预览'}</h2>
+            {current && !current.parsed && <Badge kind="warn">等待解析</Badge>}
+          </header>
+          <div className="wv-ws-scroll">
+            {!current ? <Empty text="请先在左侧选择一个文件。" />
+              : current.content ? <DocumentBody name={current.name} content={current.content} />
+              : <Empty text="这份文件没有可预览的正文。" />}
+          </div>
+        </section>
+
+        <Divider gap label="调整问答面板宽度" onDrag={delta => setChatWidth(width => clamp(width - delta, CHAT_MIN, CHAT_MAX))} />
+
+        <aside className="wv-ws-pane" style={{ width: chatWidth }} aria-label="知识库文件问答">
+          <header className="wv-ws-head">
+            <h2>文件问答</h2>
+            {thread.length > 0 && <button className="wv-btn ghost" onClick={() => setThread([])}>清空</button>}
+          </header>
+          <div className="wv-ws-scroll">
+            {!thread.length ? (
+              <div className="wv-ws-empty">
+                <p className="wv-ws-empty-title">读取当前知识库</p>
+                <p className="wv-ws-empty-desc">输入问题，获取基于当前知识库证据生成的答案。</p>
+              </div>
+            ) : (
+              <div className="wv-chat">
+                {thread.map(message => (
+                  <div className={`wv-chat-msg ${message.role}`} key={message.id}><p>{message.text}</p></div>
+                ))}
+              </div>
+            )}
+          </div>
+          <footer className="wv-ws-composer">
+            <input
+              className="wv-input"
+              aria-label="知识库问题"
+              value={question}
+              placeholder="输入知识库问题，回车发送"
+              onChange={event => setQuestion(event.target.value)}
+              onKeyDown={event => { if (event.key === 'Enter') ask('panel') }}
+            />
+            <button className="wv-btn primary" disabled={!question.trim()} onClick={() => ask('panel')}>发送</button>
+          </footer>
+        </aside>
+      </div>
+
+      {aiOpen ? (
+        <aside className="wv-modal wv-ai-float" role="dialog" aria-label="知识库 AI 使用会话">
+          <div className="wv-modal-head">
+            <h2>知识库 AI 助手</h2>
+            <button className="wv-icon-btn" aria-label="收起 AI 会话" onClick={() => setAiOpen(false)}>
+              <Minus size={16} strokeWidth={2} />
+            </button>
+          </div>
+          <div className="wv-ai-float-body">
+            {!aiThread.length ? (
+              <div className="wv-ws-empty">
+                <p className="wv-ws-empty-title">询问如何使用当前知识库</p>
+                <p className="wv-ws-empty-desc">AI 会结合当前知识库状态说明如何添加资料、整理结构和使用；本会话不上传文件，也不修改知识库。</p>
+              </div>
+            ) : (
+              <div className="wv-chat">
+                {aiThread.map(message => (
+                  <div className={`wv-chat-msg ${message.role}`} key={message.id}><p>{message.text}</p></div>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="wv-ai-float-foot">
+            <input
+              className="wv-input"
+              aria-label="AI 会话消息"
+              value={aiQuestion}
+              placeholder="例如：怎样添加资料并让员工使用？"
+              onChange={event => setAiQuestion(event.target.value)}
+              onKeyDown={event => { if (event.key === 'Enter') ask('float') }}
+            />
+            <button className="wv-btn primary" disabled={!aiQuestion.trim()} onClick={() => ask('float')}>发送</button>
+          </div>
+        </aside>
+      ) : (
+        <button className="wv-ai-fab" onClick={() => setAiOpen(true)}>
+          <Sparkles size={14} strokeWidth={2} /> AI 会话
+        </button>
+      )}
     </>
   )
 }

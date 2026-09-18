@@ -7,9 +7,11 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronRight,
+  Circle,
   Copy,
   Database,
   FileText,
+  Folder,
   MoreHorizontal,
   PanelLeftClose,
   PanelRightClose,
@@ -70,6 +72,33 @@ const thinkingMaterials = [
   { name: '股权结构说明.txt', status: '已读取', detail: '8 KB · 已识别 6 个股东及持股关系' },
   { name: '历史沿革扫描件.pdf', status: '未解析', detail: 'OCR 队列 · 原文件需要更高分辨率' },
 ]
+
+// 项目案卷只收 Markdown 与 TXT（需求文档 3.4：「项目案卷是项目私有材料，当前主要支持 Markdown 和 TXT」；
+// 真实应用的 accept 也是 .md,.txt）。
+const CASE_FILE_EXTENSIONS = '.md,.txt'
+const CASE_FILE_PATTERN = /\.(md|txt)$/i
+
+type CaseFile = {
+  name: string
+  size: string
+  status: string
+}
+
+// 资产页的种子案卷取自上面那份 thinkingMaterials —— 同一份演示数据不在两处各写一遍文件名与大小。
+// 只留 .md / .txt 两条：第三条是 .pdf 的「未解析」示例，不在案卷支持的格式里。
+const caseFileSeeds: CaseFile[] = thinkingMaterials
+  .filter(material => CASE_FILE_PATTERN.test(material.name))
+  .map(material => ({
+    name: material.name,
+    size: material.detail.split(' · ')[0],
+    status: material.status,
+  }))
+
+function formatFileSize(byteSize: number) {
+  if (byteSize < 1024) return `${byteSize} B`
+  if (byteSize < 1024 * 1024) return `${(byteSize / 1024).toFixed(1)} KB`
+  return `${(byteSize / (1024 * 1024)).toFixed(1)} MB`
+}
 
 type ThinkingAgent = {
   id: string
@@ -299,12 +328,17 @@ export default function ConversationView({
   const [settingsName, setSettingsName] = useState(project.name)
   const [settingsDesc, setSettingsDesc] = useState(project.desc)
   const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [caseFilesByProject, setCaseFilesByProject] = useState<Record<string, CaseFile[]>>({})
   const endRef = useRef<HTMLDivElement>(null)
+  const caseFileInputRef = useRef<HTMLInputElement>(null)
 
   const activeConversation = conversations.find(item => item.id === activeConversationId) ?? null
   const messages = activeConversation?.messages ?? []
   const archived = conversations.filter(item => item.deletedAt)
   const lastAssistantId = [...messages].reverse().find(message => message.role === 'assistant')?.id
+
+  // 案卷是项目私有材料（需求文档 3.4），按项目 id 分开存，切换项目不会串上一个项目的案卷。
+  const caseFiles = caseFilesByProject[project.id] ?? caseFileSeeds
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
@@ -315,6 +349,27 @@ export default function ConversationView({
     if (!text || isGenerating) return
     onSendMessage(text)
     setDraft('')
+  }
+
+  // 新加入的案卷只能是「未解析」：原型不跑解析链路，不能声称它已经被读过（与 thinkingMaterials
+  // 里既有的那个状态同名）。扩展名由 input 的 accept 收窄，真正的编码 / 大小 / 数量校验在后端，
+  // 原型不模拟。案卷按文件名唯一（真实应用 rowKey="filename"）：重名覆盖，不追加第二条。
+  function addCaseFiles(fileList: FileList | null) {
+    if (!fileList?.length) return
+
+    const incoming: CaseFile[] = Array.from(fileList).map(file => ({
+      name: file.name,
+      size: formatFileSize(file.size),
+      status: '未解析',
+    }))
+
+    setCaseFilesByProject(current => ({
+      ...current,
+      [project.id]: [
+        ...(current[project.id] ?? caseFileSeeds).filter(file => !incoming.some(next => next.name === file.name)),
+        ...incoming,
+      ],
+    }))
   }
 
   async function copyMessage(message: ChatMessage) {
@@ -485,8 +540,34 @@ export default function ConversationView({
 
             {inspectorTab === 'assets' ? (
               <div className="inspector-section">
-                <div className="inspector-title"><span>项目案卷</span></div>
-                <p className="inspector-empty">还没有案卷文件。</p>
+                <div className="inspector-title">
+                  <span className="inspector-title-label"><Folder size={13} strokeWidth={1.8} />项目案卷</span>
+                </div>
+                <div className="inspector-files">
+                  {caseFiles.map(file => (
+                    <div className="inspector-file" key={file.name}>
+                      <span className="inspector-file-name">{file.name}</span>
+                      <span className="inspector-file-meta">项目材料 · {file.size}</span>
+                      {file.status === '已读取'
+                        ? <CheckCircle2 aria-label={file.status} className="inspector-file-check" role="img" size={15} strokeWidth={2} />
+                        : <Circle aria-label={file.status} className="inspector-file-check pending" role="img" size={15} strokeWidth={2} />}
+                    </div>
+                  ))}
+                </div>
+                <input
+                  accept={CASE_FILE_EXTENSIONS}
+                  className="hidden"
+                  multiple
+                  onChange={event => {
+                    addCaseFiles(event.target.files)
+                    event.target.value = ''
+                  }}
+                  ref={caseFileInputRef}
+                  type="file"
+                />
+                <button className="inspector-add" onClick={() => caseFileInputRef.current?.click()} type="button">
+                  <Plus size={13} strokeWidth={2} />添加项目文件
+                </button>
               </div>
             ) : (
               <>

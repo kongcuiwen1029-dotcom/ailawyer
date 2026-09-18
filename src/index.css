@@ -806,7 +806,7 @@ body::after {
 .gy-main .wv-kv > div, .gy-main .wv-ico, .gy-main .wv-chip2,
 .gy-main .wv-flow-item, .gy-main .wv-flow-index,
 .gy-main .wv-toggle, .gy-main .wv-banner.info, .gy-main .wv-chat-msg.assistant,
-.gy-main .wv-modal, .gy-main .wv-toast {
+.gy-main .wv-modal, .gy-main .wv-toast, .gy-main .wv-ws-pane {
   backdrop-filter: blur(18px) saturate(180%);
 }
 
@@ -1861,6 +1861,136 @@ body::after {
 .wv-detail-sub { margin: 0; font-size: 12.5px; line-height: 1.55; }
 .wv-detail-body { display: flex; flex-direction: column; padding-top: 6px; }
 
+/* 知识库详情的三栏工作区（2026-09-17 对齐真实应用的知识库详情页）。骨架只在这里写
+   一遍：卡片、40px 页头、内部滚动区、分隔条；配色分给下面两个主题块。左栏与中栏是
+   一张联合卡片（圆角只落在最外两侧，中间由分隔条那 1px 线充当边界），右栏是独立
+   卡片，与中栏之间那条 16px 的分隔条既当间距又能拖——真实应用也是这个排法。
+   高度给 clamp：窗口够高时跟着视口长，窗口矮时不低于 460px，再矮就让整页滚动。 */
+.wv-workspace {
+  display: flex; align-items: stretch;
+  height: clamp(460px, calc(100vh - 300px), 900px);
+  margin-top: 18px; overflow-x: auto;
+}
+.wv-ws-pane {
+  display: flex; flex-direction: column; min-width: 0; overflow: hidden;
+  border: 1px solid transparent; border-radius: 16px;
+  transition: width 180ms ease;
+}
+/* 两侧都拖到最大时中栏会先于容器见底。真实应用给中栏 minSize="20rem"，这里照做：
+   中栏不再被压扁，改由 .wv-workspace 自己出横向滚动条。 */
+.wv-ws-files { border-radius: 16px 0 0 16px; border-right: 0; }
+.wv-ws-preview { flex: 1; min-width: 320px; border-radius: 0 16px 16px 0; border-left: 0; }
+/* 拖动中关掉宽度过渡，否则面板会黏在指针后面。折叠仍保留这段动画。 */
+body.wv-resizing .wv-ws-pane { transition: none; }
+.wv-ws-head {
+  display: flex; align-items: center; gap: 8px; flex: none;
+  height: 40px; padding: 0 12px; border-bottom: 1px solid transparent;
+}
+.wv-ws-head h2 {
+  margin: 0; font-size: 12px; font-weight: 600; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.wv-ws-head-actions { display: flex; align-items: center; gap: 2px; margin-left: auto; }
+.wv-ws-menu { position: relative; display: flex; }
+/* 点空白关掉上传菜单。menu 自身 z-index 30，盖在它上面。 */
+.wv-ws-scrim { position: fixed; inset: 0; z-index: 20; border: 0; background: transparent; }
+.wv-ws-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 8px; }
+.wv-ws-preview .wv-ws-scroll { padding: 18px 22px 24px; }
+.wv-ws-collapsed { display: flex; justify-content: center; padding-top: 5px; }
+
+/* 左栏的文件行：32px 单行，选中行加粗并把图标换成强调色，删除按钮只在 hover 时显形
+   （真实应用是 hover 才出现，触屏没有 hover 就用 focus-visible 兜底）。 */
+.wv-ws-file { display: flex; align-items: center; gap: 4px; height: 32px; padding-right: 4px; border-radius: 9px; }
+.wv-ws-file-main {
+  display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; height: 100%;
+  padding: 0 10px; border: 0; border-radius: 9px; background: transparent;
+  font-family: inherit; font-size: 12.5px; text-align: left; cursor: pointer; transition: 140ms ease;
+}
+.wv-ws-file-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wv-ws-file.active .wv-ws-file-main { font-weight: 600; }
+.wv-ws-file-del { opacity: 0; }
+.wv-ws-file:hover .wv-ws-file-del, .wv-ws-file-del:focus-visible { opacity: 1; }
+
+/* 分隔条：视觉上 1px（下面那条 16px 的当间距），左右各扩 5px 的命中区。 */
+.wv-ws-divider {
+  position: relative; flex: none; width: 1px; background: transparent;
+  cursor: col-resize; touch-action: none; transition: background 140ms ease;
+}
+.wv-ws-divider::after { content: ''; position: absolute; top: 0; bottom: 0; left: -5px; right: -5px; }
+.wv-ws-divider.gap { width: 16px; }
+body.wv-resizing { user-select: none; cursor: col-resize; }
+
+/* 中栏正文。markdown 走这套块级排版，.txt 走 .wv-ws-pre 保留原始断行。 */
+.wv-ws-doc { display: flex; flex-direction: column; gap: 14px; font-size: 13.5px; line-height: 1.75; }
+.wv-ws-doc h2 { margin: 0; font-size: 17px; font-weight: 620; letter-spacing: -0.02em; }
+.wv-ws-doc h3 { margin: 4px 0 0; font-size: 14.5px; font-weight: 620; }
+.wv-ws-doc h4 { margin: 2px 0 0; font-size: 13.5px; font-weight: 620; }
+.wv-ws-doc p { margin: 0; }
+.wv-ws-doc ul { margin: 0; padding-left: 19px; display: flex; flex-direction: column; gap: 5px; }
+.wv-ws-doc blockquote { margin: 0; padding-left: 13px; border-left: 2px solid transparent; }
+.wv-ws-pre {
+  margin: 0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12.5px; line-height: 1.8; white-space: pre-wrap; word-break: break-word;
+}
+
+/* 右栏的空态与输入区 */
+.wv-ws-empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px; height: 100%; padding: 24px; text-align: center;
+}
+.wv-ws-empty-title { margin: 0; font-size: 13px; font-weight: 620; }
+.wv-ws-empty-desc { margin: 0; font-size: 12.5px; line-height: 1.6; max-width: 32ch; }
+.wv-ws-composer {
+  display: flex; align-items: center; gap: 8px; flex: none;
+  padding: 10px 12px; border-top: 1px solid transparent;
+}
+.wv-ws-composer .wv-input, .wv-ai-float-foot .wv-input { flex: 1; min-width: 0; font-size: 13px; padding: 8px 12px; }
+
+/* 右下角的浮动 AI 会话。底座同样复用 `.wv-modal`（两套主题的底色、描边、毛玻璃与
+   阴影都定义在那儿），这里只改几何：固定到右下角、给一个确定的尺寸。 */
+.wv-ai-fab {
+  position: fixed; right: 26px; bottom: 26px; z-index: 40;
+  display: inline-flex; align-items: center; gap: 8px; height: 42px; padding: 0 18px;
+  border-radius: 999px; border: 1px solid transparent; cursor: pointer;
+  font-family: inherit; font-size: 13px; font-weight: 600;
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+.wv-ai-fab:hover { transform: translateY(-1px); }
+/* 写成两个类是为了压过 `.wv-modal` 自己的 width / max-height —— 那条基础规则在本段
+   之后，单类选择器会被它盖掉。 */
+.wv-modal.wv-ai-float {
+  position: fixed; right: 26px; bottom: 26px; z-index: 40;
+  width: 380px; max-width: calc(100vw - 52px);
+  height: 520px; max-height: calc(100vh - 52px);
+  animation: wv-rise 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.wv-ai-float-body { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 22px 18px; }
+.wv-ai-float-foot { display: flex; align-items: center; gap: 8px; flex: none; padding: 12px 22px 18px; }
+
+/* 面包屑版的详情页头。资源市场的详情页有面包屑（2026-09-17 对齐真实应用），员工与
+   员工组的详情页没有，仍走上面那条纵向堆叠——所以这里全部挂在 `.with-crumbs` 下。
+   四行 grid-row 把位置钉死，DOM 里 subtitle 排在 toolbar 之前也不影响「标题 + 操作」
+   同排、副标题单独占一行。 */
+.wv-detail-head.with-crumbs {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px 16px;
+}
+.wv-detail-head.with-crumbs .wv-crumbs { grid-column: 1 / -1; grid-row: 1; }
+.wv-detail-head.with-crumbs .wv-detail-title { grid-column: 1; grid-row: 2; }
+.wv-detail-head.with-crumbs .wv-toolbar { grid-column: 2; grid-row: 2; justify-content: flex-end; }
+.wv-detail-head.with-crumbs .wv-detail-sub { grid-column: 1 / -1; grid-row: 3; }
+.wv-crumbs { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; min-width: 0; font-size: 12px; }
+.wv-crumbs button {
+  border: 0; padding: 0; background: transparent; font: inherit; cursor: pointer; transition: color 140ms ease;
+}
+.wv-crumb-sep { opacity: 0.45; }
+.wv-crumb-here {
+  min-width: 0; max-width: 42ch; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; font-weight: 600;
+}
+
 /* Sections */
 .wv-section { margin-top: 30px; }
 .wv-section-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
@@ -1882,6 +2012,21 @@ body::after {
 .wv-kv > div { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; padding: 11px 14px; border-radius: 13px; }
 .wv-kv span { font-size: 12px; }
 .wv-kv b { font-size: 12.5px; font-weight: 600; text-align: right; word-break: break-all; }
+
+/* 详情抽屉里的字段行：左列 5.5rem 的标签 + 右列可换行的值，同一组串成一张圆角列表。
+   与上面的 `.wv-kv` 是两回事——`.wv-kv` 是自适应多列、值右对齐的概览卡，塞进 420px
+   的抽屉里会退化成一列右对齐，长值（资源 ID、描述）没法读。配色同样在两套主题里
+   各自声明，这里只给结构。 */
+.wv-meta-group { display: flex; flex-direction: column; gap: 10px; }
+.wv-meta-group > h3 { margin: 0; font-size: 13px; font-weight: 620; letter-spacing: -0.01em; }
+.wv-meta-list { display: flex; flex-direction: column; border-radius: 14px; overflow: hidden; }
+.wv-meta-row {
+  display: grid; grid-template-columns: 5.5rem minmax(0, 1fr); gap: 14px;
+  align-items: baseline; padding: 10px 13px; font-size: 12.5px;
+}
+.wv-meta-row > dt { font-size: 12px; }
+.wv-meta-row > dd { margin: 0; min-width: 0; word-break: break-all; }
+.wv-meta-note { margin: 0; font-size: 12px; line-height: 1.6; }
 
 /* Toggle pills */
 .wv-toggle {
@@ -1952,6 +2097,22 @@ body::after {
   border-radius: 9px; border: 1px solid transparent; background: transparent; cursor: pointer; transition: 140ms ease;
 }
 
+/* Right-hand drawer — the modal's box, pinned to the right edge. `.wv-modal` already
+   carries both themes' fills, borders, shadows and the rise animation, so the drawer
+   reuses that class and only overrides the geometry; the two cannot drift apart. */
+.wv-overlay.right { justify-content: flex-end; padding: 18px; }
+.wv-drawer {
+  max-width: 420px;
+  height: 100%;
+  max-height: 100%;
+  animation: wv-slide 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes wv-slide { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: none; } }
+.wv-drawer-body {
+  flex: 1; min-height: 0; overflow-y: auto; padding: 4px 22px 22px;
+  display: flex; flex-direction: column; gap: 22px;
+}
+
 /* Pagination */
 .wv-pager { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-top: 20px; flex-wrap: wrap; }
 .wv-pager-count { font-size: 12.5px; }
@@ -2019,6 +2180,45 @@ body::after {
 .dk-main .wv-section-head h3 { color: rgba(255,255,255,0.92); }
 .dk-main .wv-flow-index { background: rgba(120,130,237,0.22); color: #b9c0f5; }
 .dk-main .wv-detail-head { border-bottom-color: rgba(255,255,255,0.12); }
+.dk-main .wv-crumbs button { color: rgba(255,255,255,0.56); }
+.dk-main .wv-crumbs button:hover { color: rgba(255,255,255,0.94); }
+.dk-main .wv-crumb-here { color: rgba(255,255,255,0.95); }
+.dk-main .wv-meta-group > h3 { color: rgba(255,255,255,0.95); }
+.dk-main .wv-meta-list { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); }
+.dk-main .wv-meta-row + .wv-meta-row { border-top: 1px solid rgba(255,255,255,0.08); }
+.dk-main .wv-meta-row > dt { color: rgba(255,255,255,0.56); }
+.dk-main .wv-meta-row > dd { color: rgba(255,255,255,0.95); }
+.dk-main .wv-meta-note { color: rgba(255,255,255,0.56); }
+/* 知识库工作区（结构见上面 .wv-workspace 那段） */
+.dk-main .wv-ws-pane { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.14); }
+.dk-main .wv-ws-head { border-bottom-color: rgba(255,255,255,0.08); }
+.dk-main .wv-ws-head h2, .dk-main .wv-ws-empty-title { color: rgba(255,255,255,0.92); }
+.dk-main .wv-ws-head > svg { color: rgba(255,255,255,0.5); }
+.dk-main .wv-ws-empty-desc { color: rgba(255,255,255,0.56); }
+.dk-main .wv-ws-file-main { color: rgba(255,255,255,0.8); }
+.dk-main .wv-ws-file:hover { background: rgba(255,255,255,0.06); }
+.dk-main .wv-ws-file.active { background: rgba(120,130,237,0.18); }
+.dk-main .wv-ws-file.active .wv-ws-file-main { color: rgba(255,255,255,0.96); }
+.dk-main .wv-ws-file.active .wv-ws-file-main svg { color: #b9c0f5; }
+.dk-main .wv-ws-divider { background: rgba(255,255,255,0.14); }
+.dk-main .wv-ws-divider.gap { background: transparent; }
+.dk-main .wv-ws-divider:hover, body.wv-resizing .dk-main .wv-ws-divider { background: rgba(120,130,237,0.7); }
+.dk-main .wv-ws-doc { color: rgba(255,255,255,0.86); }
+.dk-main .wv-ws-doc h2, .dk-main .wv-ws-doc h3, .dk-main .wv-ws-doc h4 { color: rgba(255,255,255,0.95); }
+.dk-main .wv-ws-doc blockquote { border-left-color: rgba(255,255,255,0.16); color: rgba(255,255,255,0.72); }
+.dk-main .wv-ws-pre { color: rgba(255,255,255,0.8); }
+.dk-main .wv-ws-composer { border-top-color: rgba(255,255,255,0.08); }
+/* 浮动入口是页面上唯一一颗实心高对比胶囊，深色主题把它反过来用白底。 */
+.dk-main .wv-ai-fab { background: rgba(255,255,255,0.92); color: #1a140e; box-shadow: 0 14px 30px rgba(0,0,0,0.36); }
+/* 搜索框宽度两主题一致：2026-09-17 用户先要了灰色那条（见下面 gray scope），随后说
+   「深色版的这个搜索宽度也要修改」，所以这里只跟宽度，不跟灰色那一轮同时定下来的底色
+   与图标——深色仍是原来的 `rgba(255,255,255,0.06)` 底、`rgba(255,255,255,0.18)` 白描边、
+   13px 内距、放大镜不显形（`--dk-*` 里还没有与 `--gy-text-2` 对应的图标色档位，要显形
+   得先定一个）。`width: 100%; min-width: 0` 必须跟过来：`.wv-search` 是 inline-flex，
+   input 自己那条 `min-width: 180px` 会让它撑不满 280px 的包裹层、右边空出一截，看着
+   仍像 180 宽。 */
+.dk-main .wv-search { min-width: 280px; }
+.dk-main .wv-search > .wv-input { width: 100%; min-width: 0; }
 
 /* ── Gray scope for the new classes ── */
 .gy-main .wv-input, .gy-main .wv-select {
@@ -2092,6 +2292,39 @@ body::after {
 .gy-main .wv-bullets code { color: var(--gy-accent); }
 .gy-main .wv-flow-index { background: var(--gy-surface-2); color: var(--gy-accent); border: 1px solid var(--gy-border-soft); }
 .gy-main .wv-detail-head { border-bottom-color: var(--gy-hairline); }
+.gy-main .wv-crumbs button { color: var(--gy-text-2); }
+.gy-main .wv-crumbs button:hover { color: var(--gy-text); }
+.gy-main .wv-crumb-here { color: var(--gy-text); }
+.gy-main .wv-meta-group > h3 { color: var(--gy-text); }
+/* 抽屉本身已经是白色毛玻璃，卡片底再用 `--gy-surface` 就是白叠白、整块看不见——这是
+   抽屉独有的情况：页面上的 `.wv-kv` 是同款配色，但它铺在 `--gy-bg` 上，所以立得住。
+   这里改用 `--gy-hover`（灰色主题里唯一的非白填充）配白色 rim，凹面才分得出来。 */
+.gy-main .wv-meta-list { background: var(--gy-hover); border: 1px solid var(--gy-border); }
+.gy-main .wv-meta-row + .wv-meta-row { border-top: 1px solid var(--gy-border); }
+.gy-main .wv-meta-row > dt { color: var(--gy-text-2); }
+.gy-main .wv-meta-row > dd { color: var(--gy-text); }
+.gy-main .wv-meta-note { color: var(--gy-text-2); }
+/* 知识库工作区。卡片走 `--gy-surface` 那一档——和 `.wv-kv` 的处境一样，是铺在
+   `--gy-bg` 上的，不是抽屉那种白叠白，所以立得住。 */
+.gy-main .wv-ws-pane { background: var(--gy-surface); border-color: var(--gy-border); }
+.gy-main .wv-ws-head { border-bottom-color: var(--gy-hairline); }
+.gy-main .wv-ws-head h2, .gy-main .wv-ws-empty-title { color: var(--gy-text); }
+.gy-main .wv-ws-head > svg { color: var(--gy-text-3); }
+.gy-main .wv-ws-empty-desc { color: var(--gy-text-2); }
+.gy-main .wv-ws-file-main { color: var(--gy-text-2); }
+.gy-main .wv-ws-file:hover { background: var(--gy-hover); }
+.gy-main .wv-ws-file.active { background: var(--gy-hover); }
+.gy-main .wv-ws-file.active .wv-ws-file-main { color: var(--gy-text); }
+.gy-main .wv-ws-file.active .wv-ws-file-main svg { color: var(--gy-accent); }
+.gy-main .wv-ws-divider { background: var(--gy-hairline); }
+.gy-main .wv-ws-divider.gap { background: transparent; }
+.gy-main .wv-ws-divider:hover, body.wv-resizing .gy-main .wv-ws-divider { background: var(--gy-accent); }
+.gy-main .wv-ws-doc { color: var(--gy-text); }
+.gy-main .wv-ws-doc h2, .gy-main .wv-ws-doc h3, .gy-main .wv-ws-doc h4 { color: var(--gy-text); }
+.gy-main .wv-ws-doc blockquote { border-left-color: var(--gy-hairline); color: var(--gy-text-2); }
+.gy-main .wv-ws-pre { color: var(--gy-text); }
+.gy-main .wv-ws-composer { border-top-color: var(--gy-hairline); }
+.gy-main .wv-ai-fab { background: var(--gy-send); color: #fff; box-shadow: 0 14px 30px rgba(0,0,0,0.22); }
 
 /* ── Row and card action buttons are text buttons ──
    The action slot of a table row, a list row and a classic project card carries no
@@ -2566,6 +2799,15 @@ body::after {
 .inspector-context > span { flex: none; width: 62px; color: var(--conversation-muted); }
 .inspector-context code { min-width: 0; overflow: hidden; color: var(--conversation-muted-strong); font-size: 9.5px; text-overflow: ellipsis; white-space: nowrap; }
 .inspector-empty { margin: 0; color: var(--conversation-muted); font-size: 10px; line-height: 1.6; }
+.inspector-title-label { display: inline-flex; align-items: center; gap: 6px; }
+.inspector-files { display: grid; gap: 6px; margin-bottom: 8px; }
+.inspector-file { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 2px 8px; padding: 7px 9px; border: 1px solid var(--conversation-border); border-radius: 10px; background: var(--conversation-control); }
+.inspector-file-name { min-width: 0; overflow: hidden; color: var(--conversation-text); font-size: 10.5px; font-weight: 550; text-overflow: ellipsis; white-space: nowrap; }
+.inspector-file-meta { color: var(--conversation-muted); font-size: 9px; }
+.inspector-file-check { grid-column: 2; grid-row: 1 / span 2; color: var(--conversation-success); }
+.inspector-file-check.pending { color: var(--conversation-muted); }
+.inspector-add { width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 5px; padding: 7px 9px; border: 1px dashed var(--conversation-border); border-radius: 10px; color: var(--conversation-muted-strong); background: transparent; cursor: pointer; font: inherit; font-size: 10px; font-weight: 550; transition: 160ms ease; }
+.inspector-add:hover { color: var(--conversation-text); border-color: var(--conversation-border-strong); background: var(--conversation-control); }
 .inspector-tokens { display: grid; gap: 7px; margin: 9px 0 11px; }
 .inspector-tokens > div { display: flex; align-items: center; gap: 8px; font-size: 9.5px; color: var(--conversation-muted); }
 .inspector-tokens > div > span:first-child { flex: none; width: 74px; }
