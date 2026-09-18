@@ -683,8 +683,6 @@ interface WorkspaceValue {
   /* employees */
   createEmployee: (name: string, description: string) => string
   updateEmployee: (id: string, patch: Partial<Employee>) => void
-  addEmployeeBinding: (id: string, resourceId: string, purpose: string) => void
-  removeEmployeeBinding: (id: string, resourceId: string) => void
   pushEmployee: (id: string) => void
   disableEmployee: (id: string) => void
   deleteEmployee: (id: string) => void
@@ -848,35 +846,6 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       ? { ...employee, ...patch, revision: employee.revision + 1, updated: '刚刚' }
       : employee))
   }, [])
-
-  const addEmployeeBinding = useCallback((id: string, resourceId: string, purpose: string) => {
-    const resource = resources.find(item => item.id === resourceId)
-    const employee = employees.find(item => item.id === id)
-    if (!resource || !employee) return
-    if (!resource.published) {
-      notify(`只能绑定已发布且有权使用的资源：${resource.name} 目前未发布。`, 'warn')
-      return
-    }
-    if (employee.bindings.some(binding => binding.resourceId === resourceId)) {
-      notify(`「${resource.name}」已绑定，同一资源不能重复绑定。`, 'warn')
-      return
-    }
-    if (resource.kind === 'model' && employee.bindings.some(binding => resources.find(item => item.id === binding.resourceId)?.kind === 'model')) {
-      notify('员工只能配置一个主模型，请先替换原模型（EMPLOYEE_MODEL_CONFLICT）。', 'warn')
-      return
-    }
-    setEmployees(current => current.map(item => item.id === id
-      ? { ...item, bindings: [...item.bindings, { resourceId, purpose, enabled: true }] }
-      : item))
-    notify(`已绑定「${resource.name}」，保存后生效。`, 'ok')
-  }, [employees, notify, resources])
-
-  const removeEmployeeBinding = useCallback((id: string, resourceId: string) => {
-    setEmployees(current => current.map(employee => employee.id === id
-      ? { ...employee, bindings: employee.bindings.filter(binding => binding.resourceId !== resourceId) }
-      : employee))
-    notify('已解除绑定。')
-  }, [notify])
 
   const pushEmployee = useCallback((id: string) => {
     const employee = employees.find(item => item.id === id)
@@ -1134,7 +1103,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     resources, employees, teams, users, loginAudit, adminAudit, projects, notices,
     notify, dismissNotice,
     createResource, toggleResourcePublished, deleteResource, updateResource, addKnowledgeFile, removeKnowledgeFile, addConnectorTool,
-    createEmployee, updateEmployee, addEmployeeBinding, removeEmployeeBinding, pushEmployee, disableEmployee, deleteEmployee,
+    createEmployee, updateEmployee, pushEmployee, disableEmployee, deleteEmployee,
     createTeam, updateTeam, activateTeam, disableTeam, toggleTeamMember,
     createUser, replaceAuthorization, resetUserPassword, toggleUserStatus, revokeUserSessions,
     createProject, renameProject, deleteProject, restoreProject, purgeProject, emptyRecycleBin, setProjectStatus, bumpProjectSessions,
@@ -1142,7 +1111,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     resources, employees, teams, users, loginAudit, adminAudit, projects, notices,
     notify, dismissNotice, updateResource,
     createResource, toggleResourcePublished, deleteResource, updateResource, addKnowledgeFile, removeKnowledgeFile, addConnectorTool,
-    createEmployee, updateEmployee, addEmployeeBinding, removeEmployeeBinding, pushEmployee, disableEmployee, deleteEmployee,
+    createEmployee, updateEmployee, pushEmployee, disableEmployee, deleteEmployee,
     createTeam, updateTeam, activateTeam, disableTeam, toggleTeamMember,
     createUser, replaceAuthorization, resetUserPassword, toggleUserStatus, revokeUserSessions,
     createProject, renameProject, deleteProject, restoreProject, purgeProject, emptyRecycleBin, setProjectStatus, bumpProjectSessions,
