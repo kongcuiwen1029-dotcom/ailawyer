@@ -24,3 +24,7 @@ logs/
 # assistant-ui 的 MIT 源码快照（88MB）：对话流式输出设计规范的参考来源，
 # 只作阅读、不参与构建，不纳入版本控制（见 .folder.md）
 assistant_ui/
+
+# beautifului.dev 首页的 Chrome 保存件：同一份设计规范的另一路参考，
+# 只作阅读、不参与构建，不纳入版本控制
+Beautiful UI — Crafted primitives for AI-native interfaces.html

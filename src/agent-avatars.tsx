@@ -1,18 +1,17 @@
 import type { ReactNode } from 'react'
 
 /* ── 「数字员工」的头像 ─────────────────────────────────────────────────────
-   每个数字员工配一张自己的头像，好让「本次参与 3 位数字员工」那一行一眼看出
-   是谁在做哪件事。参考的是 WorkBuddy 专家团「每个 AI 员工一张头像」的做法。
+   每个数字员工配一张自己的头像，好让思考轨迹里一眼看出是谁在做哪件事。参考的是 WorkBuddy 专家团「每个 AI 员工一张头像」的做法。
 
    这些是**占位图形**，不是真人照片。每张都是内联 SVG，不带外部请求 —— 单文件
    产物要能在 file:// 下离线打开，挂外链图片会在脱网或换目录时裂掉。也刻意不用
    任何 CSS 变量：头像要落在浅色、深色、灰色三套主题上，而灰色主题里
    --conversation-accent-soft 是半透明白，拿它当底色就是在白底上画白块（见
-   index.css 里 .thinking-agent-avatar 的注释）。所以每张图自带底色和描边，
+   index.css 里 .trace-detail-avatar 的注释）。所以每张图自带底色和描边，
    三套主题下表现一致。
 
    造型原则：24px 下能认出来，而且同一屏出现的三位绝不撞脸。九个角色的 id 来自
-   ConversationView.tsx 的 thinkingAgentsByMode，一次只会同屏三位：
+   ConversationView.tsx 的 thinkingAgents，一次只会同屏三位：
      Direct   → counsel / facts / checker
      Agentic  → materials / research / evidence
      Workflow → orchestrator / clause / delivery

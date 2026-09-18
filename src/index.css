@@ -2656,243 +2656,233 @@ body.wv-resizing { user-select: none; cursor: col-resize; }
 .message-content { display: flex; flex-direction: column; min-width: 0; }
 .message-bubble { padding: 11px 14px; border: 1px solid var(--conversation-border); border-radius: 4px 14px 14px 14px; color: var(--conversation-text); background: var(--conversation-assistant); font-size: 13px; line-height: 1.72; white-space: pre-wrap; }
 .message-row.user .message-bubble { border-color: transparent; border-radius: 14px 4px 14px 14px; color: var(--conversation-user-text); background: var(--conversation-user); }
-.thinking-panel {
-  position: relative;
-  width: 620px;
-  max-width: 100%;
-  margin-top: 2px;
-  padding: 13px 14px 11px;
-  overflow: hidden;
-  border: 1px solid var(--conversation-border-strong);
-  /* ── One radius ladder for everything in this panel (2026-09-16 矩形圆角统一).
-     Before this it was eight values with 1px between them — 14 on the panel, 12
-     on the team card, 10 metrics, 9 agent chips, 8 avatars, 7 material rows, 6
-     and 5 on the little labels — which is a ladder in name only: steps that
-     close to be told apart read as noise, not as a scale. It is four steps now,
-     and each one is concentric to the container it sits in (nested boxes take
-     the smaller value, never the same one):
+/* ---------------------------------------------------------------------------
+ * 思考轨迹（spec/31 对话流式输出设计语言 + beautifului.dev）
+ *
+ * 收起时是一行（星形 + 状态句 + 计时 + chevron），展开后从下到上是三块：
+ * 谁在做（数字员工）、做到哪了（思考的流式输出）、碰过哪些材料（材料明细）。
+ * 它不是浮起来的表面：没有阴影、没有扫光。
+ *
+ * 展开后 620px。这是有意突破 spec/31 铁律 5（一个部件一条窄栏 384px）的一处：
+ * 员工要横排成一行、材料明细要左右两栏，384px 里两个都装不下。取舍与理由记在
+ * spec/31 的 06-落地映射里。
+ *
+ * 步骤行间那截 1px 竖线是装订线，走 --conversation-hairline：它和页面上其他所有的线
+ * 同一个重量。线画在每一行的 ::before 上而不是容器上，两端各自锚死在相邻两枚标记的
+ * 中心 —— 所以正文有的行有线、正文没的行也有线，最后一行下面不会探头。
+ *
+ * 全篇只用两种状态色，而且只在标记上：进行中是强调色（唯一的 live 色），完成是
+ * 成功绿，未到是中性。星形、文字、计时器、状态句一律中性 —— live 只有一个颜色。
+ * ------------------------------------------------------------------------- */
+/* 宽度写成定值而不是百分比：.message-content 的宽度由内容决定，百分比在这类收缩盒子里
+   会在算内在尺寸时被当成 auto —— 结果是「轨迹单独一行」比「轨迹挂在气泡上方」窄一截，
+   同一个部件的 chevron 落在两个位置上。给了定值，少内容的那一行也照样撑到 620。 */
+.trace { width: 620px; max-width: 100%; color: var(--conversation-muted); animation: trace-in 320ms cubic-bezier(.23, 1, .32, 1) both; }
+/* 轨迹下面接的是正文气泡，两者之间留一口气：它们是同一段回复的两部分，不是两条消息 */
+.trace + .message-bubble { margin-top: 8px; }
 
-       14  the panel itself, and the message bubble it stands in for
-       10  cards inside the panel        .thinking-team, .thinking-metric
-        8  blocks and rows inside those  .thinking-agent-chip, -avatar, -detail,
-                                         .thinking-material, -detail
-        6  labels and pills              .thinking-agent-material
+.trace-head { display: flex; align-items: center; gap: 6px; width: 100%; padding: 3px 0; border: 0; color: inherit; background: transparent; cursor: pointer; font: inherit; text-align: left; }
+.trace-head:focus-visible { outline: none; }
+.trace-face { flex: none; color: #664500; }
+.trace-face-disc { fill: #ffcc4d; }
+.trace-face-eye { transform-box: fill-box; transform-origin: center; }
+/* 思考时的小脸：4 秒一条共享时间轴（照 Thinking.json 那张 800×800、240 帧 / 60fps 的
+   Lottie）—— 里面是三次眨眼、一转眼珠，眉跟着挑、嘴跟着跑。它是在想事情，不是在
+   转圈加载（04/③）。几何照那份文件重画，按脸半径 R=301.896 → 9.3 换算到这个 viewBox
+   （脸心 12,12）；脸外那只橙色的手与嘴的形变在 24px 下仍不可辨（嘴的形变幅度约 1px），舍去（见 06.12）。
+   颜色就用它本来的三色（用户 2026-09-18 点名「动效就用我给你的彩色的」）：脸 #ffcc4d
+   纯填充无描边、眼眉嘴 #664500 —— 这是对铁律①的一次显式破例（原本要求触发行图标守
+   中性），取舍与代价记在 03 的「live 色的边界」与 06.10。静止的历史轨迹也是这张彩色的
+   脸，两个状态只差动作（铁律③）。四条动效同一个 4s 周期 —— 眉和嘴不另跑自己的拍子，
+   否则与眼睛的相位会越差越远。 */
+.trace.live .trace-face-shift { animation: trace-face-look 4s linear infinite; }
+.trace.live .trace-face-eye { animation: trace-face-blink 4s linear infinite; }
+.trace.live .trace-face-brow-l { animation: trace-face-brow-l 4s linear infinite; }
+.trace.live .trace-face-brow-r { animation: trace-face-brow-r 4s linear infinite; }
+.trace-title { min-width: 0; overflow: hidden; color: var(--conversation-muted-strong); font-size: 12.5px; font-weight: 550; text-overflow: ellipsis; white-space: nowrap; }
+.trace-count { flex: none; color: var(--conversation-muted); font-size: 11.5px; }
+.trace-count::before { content: '·'; margin-right: 5px; }
+/* 「已中断」用中性色：断掉的是这次运行，不是哪一步出了错 —— 危险色留给失败本身 */
+.trace-halt { flex: none; color: var(--conversation-muted); font-size: 11.5px; }
+.trace-halt::before { content: '·'; margin-right: 5px; }
+/* 计时器靠右。数字每 100ms 变一次，tabular-nums 让它们等宽 —— 否则整行会跟着抖 */
+.trace-timer { margin-left: auto; flex: none; color: var(--conversation-muted); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+.trace-caret { margin-left: auto; flex: none; color: var(--conversation-muted); transition: transform 200ms cubic-bezier(.23, 1, .32, 1); }
+.trace-timer + .trace-caret { margin-left: 0; }
+.trace-caret.is-open { transform: rotate(180deg); }
 
-     Every value is already the page's vocabulary (14 bubble, 12 session row,
-     10 icon button) — nothing new was invented for this card.
+/* 折叠用 grid-template-rows 的 0fr ↔ 1fr，不需要预先知道内容多高，也不必用
+   max-height 猜一个数（猜小了裁内容，猜大了动画提前结束）。 */
+.trace-body { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows 400ms cubic-bezier(.23, 1, .32, 1), opacity 260ms ease; }
+.trace-body.is-open { grid-template-rows: 1fr; opacity: 1; }
+.trace-body > div { overflow: hidden; }
+.trace-body-inner { margin: 9px 0 2px; }
 
-     The panel's own corner used to be `14px 14px 14px 4px`: a speech tail in the
-     BOTTOM-left. That is not the tail the assistant bubble wears (`.message-bubble`
-     is 4px TOP-left, pointing at the avatar), so the tail moved sides when the
-     panel was replaced by the real answer, and read as a mistake while it was up.
-     A status card has nothing to point at anyway, and the ask was for uniform
-     corners — so it is one radius now, all four. The bubbles keep their tails:
-     those are speech, and they still agree with each other. */
-  border-radius: 14px;
-  background: linear-gradient(135deg, var(--conversation-thinking), var(--conversation-assistant));
-  box-shadow: 0 8px 22px var(--conversation-shadow);
-  animation: thinking-panel-in 320ms ease-out both;
-}
-/* Ambient sheen across the whole panel. 21s is five times the team loop defined
-   on .thinking-team below, so it is the same heartbeat rather than a sixth
-   clock sitting next to it — the two can never drift into an off-beat. It has
-   to be written out as a literal because --thinking-loop is declared on
-   .thinking-team, i.e. below this element, so it is not in scope here. */
-.thinking-panel::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: linear-gradient(110deg, transparent 25%, rgba(255,255,255,.22) 48%, transparent 66%);
-  transform: translateX(-110%);
-  animation: thinking-sheen 21s ease-in-out infinite;
-}
-.thinking-panel-head { position: relative; z-index: 1; display: flex; align-items: center; gap: 10px; }
-/* ── .thinking-team's motion ────────────────────────────────────────────────
-   This panel used to run on five unrelated clocks: a 7s halo pulse, a 6.5s
-   sweep, a 4.6s avatar breathe, a 3.4s dot pulse, and the 1.4s status
-   heartbeat. No two divide each other, so the eye never finds a rhythm and the
-   panel reads as restless rather than as busy. Now there are two clocks and one
-   is exactly a third of the other: a 4.2s team loop — each agent emits one ring
-   per loop, staggered a third apart — over a 1.4s heartbeat.
+/* ── 谁在做：一横排数字员工 ─────────────────────────────────────────────── */
+.trace-team { position: relative; padding: 7px 8px 8px; overflow: hidden; border: 1px solid var(--conversation-border); border-radius: 10px; background: var(--conversation-surface); }
+/* 顶部一圈光晕。深色下是一层很淡的强调色；灰色下 --conversation-accent-soft 是
+   半透明白，落在近白的纸面上什么也看不见 —— 那一侧本来就是严格中性的表面，
+   看不见是对的，别为了「让它可见」去给它换个颜色。 */
+.trace-team::before { content: ''; position: absolute; inset: -40% -12% auto; height: 130%; pointer-events: none; background: radial-gradient(58% 62% at 50% 0%, var(--conversation-accent-soft), transparent 72%); opacity: .6; }
+.trace-team-head { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--conversation-muted); font-size: 11px; }
+.trace-team-running { display: inline-flex; align-items: center; gap: 5px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* 只有这颗点是强调色，旁边的「共同处理中」是中性文字 —— live 只有一个颜色 */
+.trace-team-pulse { width: 4px; height: 4px; flex: none; border-radius: 50%; background: var(--conversation-accent); animation: thinking-dot-pulse 1.4s ease-in-out infinite; }
+.trace-team-rail { position: relative; z-index: 1; display: flex; gap: 4px; padding: 5px 0 0; }
+.trace-agent-chip { position: relative; min-width: 0; flex: 1 1 0; display: flex; align-items: center; gap: 6px; padding: 4px 6px; border: 1px solid transparent; border-radius: 8px; color: var(--conversation-muted-strong); background: transparent; cursor: pointer; font: inherit; text-align: left; transition: border-color 200ms ease, background 200ms ease; }
+.trace-agent-chip:hover, .trace-agent-chip:focus-visible { border-color: var(--conversation-border); background: var(--conversation-control-hover); outline: none; }
+.trace-agent-chip[aria-expanded='true'] { border-color: var(--conversation-border); }
+.trace-agent-caret { flex: none; color: var(--conversation-muted); opacity: .55; transition: transform 200ms ease, opacity 200ms ease; }
+.trace-agent-chip:hover .trace-agent-caret, .trace-agent-chip[aria-expanded='true'] .trace-agent-caret { opacity: 1; }
+.trace-agent-caret.is-open { transform: rotate(180deg); }
+/* 头像框只有几何，没有底色：图本身画满了自己的颜色。灰色主题里
+   --conversation-accent-soft 是半透明白，拿它当底就是在白底上画白块。 */
+.trace-agent-avatar { position: relative; width: 24px; height: 24px; display: inline-flex; flex: none; border-radius: 8px; }
+.trace-agent-avatar > svg { display: block; width: 100%; height: 100%; border-radius: 8px; }
+/* 三枚头像的环轮流往外扩：错峰 1.6s、总周期 4.8s，任一时刻恰好一枚在扩，接力不断线。
+   2026-09-18 用户点名把轮流请回来（「这三个员工的动效的光圈闪烁效果轮流来」）——
+   改造前本来就是这个形态（旧心跳 4.2s 一圈），当时因为与步骤的 5s 心跳各跑各的、
+   会出现「步骤还停在第 1 步、头像已经转到第 3 个人」而改成只亮 active 一枚。
+   这次按用户的取舍回摆：头像是氛围，语义由步骤行独立承担（它仍读 activeStep）；
+   「与步骤不同步」是记在案的已知代价，见 06 的 6.11。
+   负延迟是「提前」：提前 2/3 周期在循环里等价于落后 1/3 周期（1.6s），所以延迟量
+   写 -3.2s 而不是 -1.6s —— 接力的顺序才是 1 → 2 → 3。 */
+.trace.live .trace-agent-avatar::after { content: ''; position: absolute; inset: 0; border-radius: 8px; pointer-events: none; border: 1px solid var(--conversation-accent); animation: trace-agent-ring 4.8s cubic-bezier(.4, 0, .4, 1) infinite; animation-delay: calc(var(--i, 0) * -3.2s); }
+/* 走完的那位挂一颗绿点：他负责的这段已经结束了 */
+.trace-agent-dot { position: absolute; right: -1px; bottom: -1px; z-index: 1; width: 6px; height: 6px; border-radius: 50%; background: var(--conversation-success); box-shadow: 0 0 0 2px var(--conversation-surface); }
+.trace-agent-copy { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.trace-agent-copy strong, .trace-agent-copy small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trace-agent-copy strong { color: var(--conversation-text); font-size: 10.5px; font-weight: 650; }
+.trace-agent-copy small { color: var(--conversation-muted); font-size: 10px; }
+.trace-agent-detail { position: relative; z-index: 1; margin-top: 6px; padding: 8px 9px; border-radius: 8px; background: var(--conversation-control); animation: trace-detail-in 200ms ease-out both; }
+.trace-agent-detail-head { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+.trace-agent-detail-head strong { color: var(--conversation-text); font-size: 11.5px; font-weight: 650; }
+.trace-agent-detail-head span { overflow: hidden; color: var(--conversation-muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.trace-agent-detail > p { margin: 4px 0 0; color: var(--conversation-muted-strong); font-size: 11.5px; line-height: 1.6; }
+/* 展开块里的材料胶囊复用了纸面色（表面是 --conversation-control 的填充）——
+   和第三块那块真材料明细不是一个东西，所以不叫 material。 */
+.trace-agent-materials { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 7px; }
+.trace-agent-material { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; overflow: hidden; padding: 2px 6px; border-radius: 6px; color: var(--conversation-muted-strong); background: var(--conversation-surface); font-size: 10.5px; text-overflow: ellipsis; white-space: nowrap; }
+.trace-agent-material-dot { width: 4px; height: 4px; flex: none; border-radius: 50%; background: var(--conversation-success); }
+.trace-agent-material.warning { color: var(--conversation-danger); }
+.trace-agent-material.warning .trace-agent-material-dot { background: var(--conversation-danger); }
 
-   Three things were wrong beyond the count:
+/* ── 做到哪了：思考的流式输出 ──────────────────────────────────────────── */
+.trace-stream { margin-top: 10px; }
+.trace-stream-head { display: flex; align-items: center; gap: 6px; width: 100%; padding: 2px 0; border: 0; color: var(--conversation-muted); background: transparent; cursor: pointer; font: inherit; text-align: left; }
+.trace-stream-head:focus-visible { outline: none; }
+.trace-stream-caret { flex: none; transition: transform 200ms cubic-bezier(.23, 1, .32, 1); }
+.trace-stream-caret.is-open { transform: rotate(180deg); }
+.trace-stream-title { color: var(--conversation-muted-strong); font-size: 12px; font-weight: 550; }
+.trace-stream-count { margin-left: auto; flex: none; color: var(--conversation-muted); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+.trace-stream-body { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows 400ms cubic-bezier(.23, 1, .32, 1), opacity 260ms ease; }
+.trace-stream-body.is-open { grid-template-rows: 1fr; opacity: 1; }
+.trace-stream-body > div { overflow: hidden; }
+.trace-stream-inner { padding: 4px 0 0; }
 
-   1. The halo's colour is --conversation-accent-soft, which in the gray theme
-      is translucent WHITE. A white blob pulsing on a white panel is not light,
-      it is a smudge that keeps coming back. It is static now: the panel's lit
-      crown, the same one .gy-sidebar and .conversation-view wear.
-   2. The avatar "breathe" animated box-shadow spread — a repaint per frame per
-      agent. The ring is a pseudo-element now, so scale and opacity carry it on
-      the compositor instead.
-   3. Each agent used to pulse on its own schedule, so at any instant all three
-      were mid-motion and none of them was "the one working". The delay is what
-      makes the row readable: agent i starts i/3 of a loop later than the one
-      before, and each is lit for exactly a third of the loop and rests for the
-      other two thirds. The three lit windows therefore tile the loop end to end
-      and the wave always travels left to right. The delay is positive on
-      purpose — with a positive delay an agent that has not started yet simply
-      shows its resting state, and agent 0 is moving from the first frame.
+.trace-step { position: relative; display: flex; align-items: flex-start; gap: 8px; padding: 4px 6px 10px; border-radius: 6px; }
+/* 装订线。两端各自锚在相邻两枚标记的圆心：absolute 的包含块是 border box（没有边框时
+   就是元素外框），所以上端 = 标记外距 1 + 半径 8 + padding 4 = 13，下端 = 下一行的同一
+   个 13。两端都不看行高，所以有没有正文、正文几行，线都接得准。 */
+.trace-step:not(:last-child)::before { content: ''; position: absolute; left: 14px; top: 13px; bottom: -13px; width: 1px; background: var(--conversation-hairline); }
+.trace-step-mark { width: 16px; height: 16px; margin-top: 1px; display: inline-flex; align-items: center; justify-content: center; flex: none; color: var(--conversation-muted); }
+.trace-step.done .trace-step-mark { color: var(--conversation-success); }
+.trace-step.active .trace-step-mark { color: var(--conversation-accent); }
+.trace-mark-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+.trace-step.active .trace-mark-dot { animation: thinking-dot-pulse 1.4s ease-in-out infinite; }
+.trace-step-copy { min-width: 0; flex: 1 1 auto; }
+.trace-step-line { display: flex; align-items: baseline; gap: 8px; }
+.trace-step-title { min-width: 0; overflow: hidden; color: var(--conversation-muted); font-size: 12.5px; text-overflow: ellipsis; white-space: nowrap; transition: color 300ms ease; }
+.trace-step.done .trace-step-title, .trace-step.active .trace-step-title { color: var(--conversation-text); }
+.trace-step-note { margin-left: auto; flex: none; color: var(--conversation-muted); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+.trace-step-body { margin: 2px 0 0; color: var(--conversation-muted-strong); font-size: 11.5px; line-height: 1.65; }
+/* 刚轮到的那一步，正文是从强调色沉回正文色的 —— 它刚刚被写出来。这是 04 的
+   「颜色沉降」在整句粒度上的近似：规范逐词 700ms，这里一整句 900ms。 */
+.trace-step.active .trace-step-body { animation: trace-step-land 900ms ease-out both; }
+/* 行错开入场。挂在 .is-open 上而不是行自己身上：折叠时它们本来就看不见，
+   而每次展开重播一次，比只有第一次能看到要好。 */
+.trace-stream-body.is-open .trace-step { animation: trace-in 320ms cubic-bezier(.23, 1, .32, 1) both; animation-delay: calc(var(--i, 0) * 120ms); }
 
-   Every small dot in the panel now shares that 1.4s heartbeat — the panel-head
-   实时 dot, the "正在执行" dot, the active step's badge and the current-line dot.
-   Two of them used to run on their own periods (a 3.4s dot pulse and a 1.6s step
-   pop, neither of which divides 4.2s) and two of them bobbed two pixels sideways
-   from where they sit. A 5px dot travelling 2px is not a pulse, it is a jitter,
-   so all four scale in place instead. */
-.thinking-team { --thinking-loop: 4.2s; --thinking-stagger: calc(var(--thinking-loop) / 3); position: relative; z-index: 1; margin-top: 10px; padding: 7px 8px 8px; overflow: hidden; border: 1px solid var(--conversation-border); border-radius: 10px; background: var(--conversation-surface); }
-.thinking-team::before { content: ''; position: absolute; inset: -40% -12% auto; height: 130%; pointer-events: none; background: radial-gradient(58% 62% at 50% 0%, var(--conversation-accent-soft), transparent 72%); opacity: .6; }
-.thinking-copy { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
-.thinking-title-row { display: flex; align-items: center; gap: 7px; }
-.thinking-title-row strong { color: var(--conversation-text); font-size: 12px; font-weight: 650; }
-.thinking-copy > span { overflow: hidden; color: var(--conversation-muted); font-size: 10.5px; text-overflow: ellipsis; white-space: nowrap; }
-.thinking-live-dot { display: inline-flex; align-items: center; gap: 4px; color: var(--conversation-success); font-size: 9.5px; font-weight: 550; }
-.thinking-live-dot > span { width: 5px; height: 5px; border-radius: 50%; background: currentColor; animation: thinking-dot-pulse 1.4s ease-in-out infinite; }
-.thinking-agent-heading { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--conversation-muted); font-size: 9px; }
-.thinking-agent-running { display: inline-flex; align-items: center; gap: 5px; min-width: 0; overflow: hidden; color: var(--conversation-accent); text-overflow: ellipsis; white-space: nowrap; }
-.thinking-agent-running > span { width: 4px; height: 4px; flex: none; border-radius: 50%; background: currentColor; animation: thinking-dot-pulse 1.4s ease-in-out infinite; }
-.thinking-agent-rail { position: relative; z-index: 1; display: flex; gap: 4px; padding: 5px 0 0; overflow-x: auto; scrollbar-width: none; }
-.thinking-agent-rail::-webkit-scrollbar { display: none; }
-.thinking-agent-chip { position: relative; min-width: 0; flex: 1 1 0; display: flex; align-items: center; gap: 6px; padding: 4px 6px; border: 1px solid transparent; border-radius: 8px; color: var(--conversation-muted-strong); background: transparent; cursor: pointer; font: inherit; text-align: left; transition: border-color 200ms ease, background 200ms ease; }
-.thinking-agent-chip:hover, .thinking-agent-chip:focus-visible { border-color: var(--conversation-border); background: var(--conversation-control-hover); outline: none; }
-.thinking-agent-chip[aria-expanded='true'] { border-color: var(--conversation-border); }
-.thinking-agent-caret { flex: none; color: var(--conversation-muted); opacity: .55; transition: transform 200ms ease, opacity 200ms ease; }
-.thinking-agent-chip:hover .thinking-agent-caret, .thinking-agent-chip[aria-expanded='true'] .thinking-agent-caret { opacity: 1; }
-.thinking-agent-caret.is-open { transform: rotate(180deg); }
-/* The avatar is a placeholder portrait now, not a tinted outline — the SVG in
-   src/agent-avatars.tsx paints the whole tile with its own colours, so this
-   rule is geometry only (no background, no color) and the tile is a squircle to
-   match the artwork's own rounded corners. The ring is a pseudo-element: a
-   box-shadow would repaint every frame of a four-second loop. */
-.thinking-agent-avatar { position: relative; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; flex: none; border-radius: 8px; animation: thinking-agent-turn var(--thinking-loop) cubic-bezier(.4,0,.4,1) infinite; animation-delay: calc(var(--i, 0) * var(--thinking-stagger)); }
-.thinking-agent-avatar > svg { display: block; width: 100%; height: 100%; border-radius: 8px; }
-.thinking-agent-avatar::after { content: ''; position: absolute; inset: 0; border-radius: 8px; pointer-events: none; border: 1px solid var(--conversation-accent); opacity: 0; animation: thinking-agent-ring var(--thinking-loop) cubic-bezier(.4,0,.4,1) infinite; animation-delay: calc(var(--i, 0) * var(--thinking-stagger)); }
-.thinking-agent-dot { position: absolute; right: -1px; bottom: -1px; z-index: 1; width: 6px; height: 6px; border-radius: 50%; background: var(--conversation-success); box-shadow: 0 0 0 2px var(--conversation-surface); animation: thinking-agent-dot var(--thinking-loop) ease-in-out infinite; animation-delay: calc(var(--i, 0) * var(--thinking-stagger)); }
-.thinking-agent-copy { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
-.thinking-agent-copy strong, .thinking-agent-copy small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.thinking-agent-copy strong { color: var(--conversation-text); font-size: 9.5px; font-weight: 650; }
-.thinking-agent-copy small { color: var(--conversation-muted); font-size: 8px; }
-.thinking-agent-detail { position: relative; z-index: 1; margin-top: 6px; padding: 7px 9px; border-radius: 8px; background: var(--conversation-control); animation: thinking-details-in 200ms ease-out both; }
-.thinking-agent-detail-head { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
-.thinking-agent-detail-head strong { color: var(--conversation-text); font-size: 9.5px; font-weight: 650; }
-.thinking-agent-detail-head span { overflow: hidden; color: var(--conversation-muted); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
-.thinking-agent-detail > p { margin: 4px 0 0; color: var(--conversation-muted-strong); font-size: 9px; line-height: 1.55; }
-.thinking-agent-detail-materials { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
-.thinking-agent-material { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; padding: 2px 6px; border-radius: 6px; overflow: hidden; color: var(--conversation-muted-strong); background: var(--conversation-surface); font-size: 8.5px; text-overflow: ellipsis; white-space: nowrap; }
-.thinking-agent-material-dot { width: 4px; height: 4px; flex: none; border-radius: 50%; background: var(--conversation-success); }
-.thinking-agent-material.warning { color: var(--conversation-danger); background: var(--conversation-danger-soft); }
-.thinking-agent-material.warning .thinking-agent-material-dot { background: var(--conversation-danger); }
-.thinking-step-line { position: relative; z-index: 1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 15px 0 11px; }
-.thinking-step { display: flex; align-items: center; gap: 5px; min-width: 0; color: var(--conversation-muted); font-size: 9.5px; transition: color 320ms ease; }
-/* Every state change on this line is a transition, never a cut. The dot used to
-   swap its ring colour, its glyph colour and its halo in a single frame while
-   only the rail eased, which is what the step line looked like it was doing:
-   blinking. The three durations are deliberately ordered so the shortest thing
-   (the ring, 320ms) settles before the longest (the rail, 700ms) — motion is
-   still travelling when the colour arrives, so the eye is led along the line
-   rather than being shown one state replaced by another.
-   320ms is the duration this rail already used before it carried the wipe;
-   420ms is a tenth of the panel's 4.2s team loop; 700ms is half the 1.4s
-   heartbeat. Nothing here is a new clock — the heartbeat and the loop are still
-   the only two, and these are one-shot transitions that end.
-   `box-shadow: 0 0 0 0 transparent` on the resting dot exists only so there is
-   a same-shaped shadow list to interpolate from: a dot that has no box-shadow
-   at all cannot grow one, it can only appear wearing it. */
-.thinking-step-dot { width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; flex: none; border: 1px solid var(--conversation-border-strong); border-radius: 50%; color: var(--conversation-muted); background: var(--conversation-surface); box-shadow: 0 0 0 0 transparent; font-size: 9px; transition: border-color 320ms ease, color 320ms ease, background-color 320ms ease, box-shadow 420ms ease; }
-.thinking-step-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* The rail is an in-flow flex child, not an absolutely positioned ::after. The
-   old rule hung the line off the step's right edge (`left: calc(100% + 1px)`),
-   which put it *beside the cell* rather than between the nodes — so it started
-   in the empty space past the label and ran straight across the next step's
-   label at mid-height, i.e. it struck the text through. As a flex child it is
-   laid out after the label and stops at the cell edge; the -8px right margin
-   carries it across the grid gap so it meets the next dot exactly. It can never
-   touch text, whatever the labels are.
-   It also carries the progress now: each segment is lit once the step before it
-   is finished, which is what the standalone bar at the bottom of the panel used
-   to encode — this one is self-labelling, because the dots at either end are.
-   Height is 1px, the same weight as --conversation-hairline draws everywhere
-   else, so the unlit track reads as a hairline and the lit segment as the same
-   hairline in green. At 2px it was heavier than every other rule in the panel
-   and pulled the eye off the three labels it sits between.
-   The lit segment is painted by a ::after that wipes left-to-right rather than
-   by fading the track's own background. A fade is the wrong verb for this line:
-   the segment is a measure of how far the run has got, and a hairline that
-   changes colour along its whole length at once reads as the line being
-   switched on, not as progress reaching the next node. The wipe finishes at the
-   next dot, which is the one that has just lit, so the two ends of the segment
-   agree about where the run is. */
-.thinking-step-rail { position: relative; flex: 1 1 0; height: 1px; margin-right: -8px; border-radius: 1px; background: var(--conversation-hairline); }
-.thinking-step-rail::after { content: ''; position: absolute; inset: 0; border-radius: inherit; background: var(--conversation-success); transform: scaleX(0); transform-origin: left center; transition: transform 700ms cubic-bezier(.34, .74, .2, 1); }
-.thinking-step-rail.done::after { transform: scaleX(1); }
-.thinking-step.active { color: var(--conversation-text); font-weight: 600; }
-/* The ring is mixed from --conversation-accent rather than taken from
-   --conversation-accent-soft: that token is translucent WHITE in the gray
-   theme (rgba(255,255,255,.48)), so the current step's only "you are here"
-   marker was invisible in the theme the panel is reviewed in. */
-.thinking-step.active .thinking-step-dot { border-color: var(--conversation-accent); color: var(--conversation-accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--conversation-accent) 16%, transparent); animation: thinking-step-pop 1.4s ease-in-out infinite; }
-.thinking-step.complete { color: var(--conversation-success); }
-/* The one thing on this line CSS cannot transition is the glyph itself: React
-   swaps the child node, so the step number is unmounted and the CheckCircle2 is
-   mounted in the same commit and there is nothing between them to interpolate.
-   The stroke does at least travel with the dot, because the icon paints in
-   currentColor and the dot's own color is on a transition. The settle covers the
-   shape change: the dot drops from 1.12 into its resting size as the ring turns
-   green, so the swap happens during a movement instead of between two static
-   frames. It is one-shot and has no fill mode — its last keyframe is the resting
-   size, so the dot is never left sitting on an animation value. */
-.thinking-step.complete .thinking-step-dot { border-color: var(--conversation-success); color: var(--conversation-success); animation: thinking-step-settle 280ms cubic-bezier(.2, .8, .3, 1); }
-.thinking-metrics { position: relative; z-index: 1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-.thinking-metric { min-width: 0; padding: 9px 10px 8px; text-align: left; border: 1px solid var(--conversation-border); border-radius: 10px; color: var(--conversation-text); background: var(--conversation-control); cursor: pointer; transition: 160ms ease; }
-.thinking-metric:hover, .thinking-metric:focus-visible { border-color: var(--conversation-border-strong); background: var(--conversation-control-hover); transform: translateY(-1px); outline: none; }
-.thinking-metric-label { display: flex; align-items: center; gap: 5px; color: var(--conversation-muted-strong); font-size: 9.5px; }
-.thinking-metric-label svg { color: var(--conversation-accent); }
-.thinking-metric strong { display: block; margin-top: 5px; color: var(--conversation-text); font-size: 17px; line-height: 1; font-weight: 650; font-variant-numeric: tabular-nums; }
-.thinking-metric strong small { color: var(--conversation-muted); font-size: 9px; font-weight: 500; }
-.thinking-metric-caption { display: block; margin-top: 5px; color: var(--conversation-danger); font-size: 9.5px; }
-.thinking-current-line { position: relative; z-index: 1; display: flex; align-items: center; gap: 6px; margin-top: 10px; color: var(--conversation-muted-strong); font-size: 9.5px; }
-.thinking-current-pulse { width: 5px; height: 5px; flex: none; border-radius: 50%; background: var(--conversation-accent); animation: thinking-dot-pulse 1.4s ease-in-out infinite; }
-.thinking-details-toggle { position: relative; z-index: 1; display: inline-flex; align-items: center; gap: 5px; margin-top: 11px; padding: 0; border: 0; color: var(--conversation-accent); background: transparent; cursor: pointer; font: inherit; font-size: 10px; }
-.thinking-details-toggle:hover { color: var(--conversation-text); }
-.thinking-details-toggle svg:last-child { transition: transform 180ms ease; }
-.thinking-details-toggle svg:last-child.is-open { transform: rotate(180deg); }
-.thinking-details { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(0, .92fr); gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--conversation-hairline); animation: thinking-details-in 220ms ease-out both; }
-.thinking-material-list { min-width: 0; display: grid; gap: 4px; }
-.thinking-material { min-width: 0; display: grid; grid-template-columns: 8px minmax(0, 1fr) auto 13px; align-items: center; gap: 6px; padding: 7px 7px; text-align: left; border: 1px solid transparent; border-radius: 8px; color: var(--conversation-muted-strong); background: transparent; cursor: pointer; font: inherit; }
-.thinking-material:hover, .thinking-material:focus-visible, .thinking-material.selected { border-color: var(--conversation-border); color: var(--conversation-text); background: var(--conversation-control-hover); outline: none; }
-.thinking-material-status { width: 6px; height: 6px; border-radius: 50%; background: var(--conversation-success); box-shadow: 0 0 0 3px var(--conversation-success-soft); }
-.thinking-material-status.warning { background: var(--conversation-danger); box-shadow: 0 0 0 3px var(--conversation-danger-soft); }
-.thinking-material-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9.5px; }
-.thinking-material-state { color: var(--conversation-muted); font-size: 9px; white-space: nowrap; }
-.thinking-material > svg { color: var(--conversation-muted); }
-.thinking-material-detail { min-width: 0; align-self: stretch; padding: 8px 9px; border-radius: 8px; background: var(--conversation-control); }
-.thinking-material-detail > span, .thinking-material-detail > strong, .thinking-material-detail > p { display: block; }
-.thinking-material-detail > span { color: var(--conversation-muted); font-size: 9px; }
-.thinking-material-detail > strong { margin-top: 6px; overflow: hidden; color: var(--conversation-text); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
-.thinking-material-detail > p { margin: 5px 0 0; color: var(--conversation-muted-strong); font-size: 9.5px; line-height: 1.55; }
-@keyframes thinking-panel-in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes thinking-details-in { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: translateY(0); } }
-/* Symmetric, so `infinite` gives a 1.4s period. It used to be a from/to pair
-   driven by `infinite alternate`, which makes the real period twice the
-   duration — 2.8s, the one value in the panel that divided neither 4.2s nor
-   1.4s. */
-@keyframes thinking-step-pop { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
-/* The heartbeat's counterpart, and the only one-shot keyframe on this line. It
-   plays once as a step closes and ends on scale(1), which is also the resting
-   value, so it needs no fill mode and leaves nothing behind for the next state
-   to fight. 280ms — shorter than the ring's 320ms, so the movement is over
-   before the colour has finished arriving and the dot is still while its
-   glyph finishes turning green. */
-@keyframes thinking-step-settle { from { transform: scale(1.12); } to { transform: scale(1); } }
-/* Each agent is active for the first third of its own cycle and rests for the
-   remaining two thirds, so the three of them tile one loop end to end. The
-   keyframes below all share that boundary at 34% — change it in one place and
-   the ring, the lift and the dot stay in step. */
-@keyframes thinking-agent-turn { 0%, 34%, 100% { transform: none; } 14% { transform: scale(1.06); } }
-@keyframes thinking-agent-ring { 0% { opacity: 0; transform: scale(.96); } 8% { opacity: .5; } 34%, 100% { opacity: 0; transform: scale(1.6); } }
-@keyframes thinking-agent-dot { 0%, 34%, 100% { opacity: .55; transform: scale(.86); } 14% { opacity: 1; transform: scale(1.12); } }
+/* ── 碰过哪些材料：左列表右详情 ───────────────────────────────────────── */
+.trace-details-toggle { display: inline-flex; align-items: center; gap: 5px; margin-top: 8px; padding: 0; border: 0; color: var(--conversation-muted-strong); background: transparent; cursor: pointer; font: inherit; font-size: 11.5px; }
+.trace-details-toggle:hover { color: var(--conversation-text); }
+.trace-details-toggle svg { transition: transform 180ms ease; }
+.trace-details-toggle svg.is-open { transform: rotate(180deg); }
+.trace-details { display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(0, .92fr); gap: 8px; margin-top: 9px; padding-top: 9px; border-top: 1px solid var(--conversation-hairline); animation: trace-detail-in 220ms ease-out both; }
+.trace-material-list { min-width: 0; display: grid; align-content: start; gap: 4px; }
+.trace-material { min-width: 0; display: grid; grid-template-columns: 8px minmax(0, 1fr) auto 13px; align-items: center; gap: 6px; padding: 7px; border: 1px solid transparent; border-radius: 8px; color: var(--conversation-muted-strong); background: transparent; cursor: pointer; font: inherit; text-align: left; }
+.trace-material:hover, .trace-material:focus-visible, .trace-material.selected { border-color: var(--conversation-border); color: var(--conversation-text); background: var(--conversation-control-hover); outline: none; }
+.trace-material-status { width: 6px; height: 6px; border-radius: 50%; background: var(--conversation-success); box-shadow: 0 0 0 3px var(--conversation-success-soft); }
+.trace-material-status.warning { background: var(--conversation-danger); box-shadow: 0 0 0 3px var(--conversation-danger-soft); }
+.trace-material-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11.5px; }
+.trace-material-state { color: var(--conversation-muted); font-size: 11px; white-space: nowrap; }
+.trace-material > svg { color: var(--conversation-muted); }
+.trace-material-detail { min-width: 0; align-self: stretch; padding: 8px 9px; border-radius: 8px; background: var(--conversation-control); }
+.trace-material-detail > span, .trace-material-detail > strong, .trace-material-detail > p { display: block; }
+.trace-material-detail > span { color: var(--conversation-muted); font-size: 11px; }
+.trace-material-detail > strong { margin-top: 6px; overflow: hidden; color: var(--conversation-text); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.trace-material-detail > p { margin: 5px 0 0; color: var(--conversation-muted-strong); font-size: 11.5px; line-height: 1.6; }
+
+/* 灰色主题：上面三处的处方都是「半透明白提亮」，可灰主题的卡片自己就是 72% 白 ——
+   白 48% 叠上去只差 1.5 个色阶，容器边界等于没有，白 80% 的 hover 与选中同理。这正是
+   --gy-hover 注释里记下的那个失效模式（半透明白叠在白上 = 什么都没发生），处方照旧：
+   换成不透明的、比卡片更暗的 #e6e6e6。内嵌面因此是凹的，方向与深色相反 —— 跟随本主题
+   既有的内嵌面惯例（.wv-meta-list / .wv-ws-file 都这么做），不是把两个主题拉平。 */
+.conversation-theme.gray .trace-agent-detail,
+.conversation-theme.gray .trace-material-detail { background: var(--gy-hover); }
+.conversation-theme.gray .trace-agent-chip:hover,
+.conversation-theme.gray .trace-agent-chip:focus-visible,
+.conversation-theme.gray .trace-material:hover,
+.conversation-theme.gray .trace-material:focus-visible,
+.conversation-theme.gray .trace-material.selected { background: var(--gy-hover); }
+
+@keyframes trace-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+@keyframes trace-detail-in { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
 @keyframes thinking-dot-pulse { 0%, 100% { opacity: .45; transform: scale(.8); } 50% { opacity: 1; transform: scale(1.05); } }
-@keyframes thinking-sheen { 0%, 35% { transform: translateX(-110%); } 70%, 100% { transform: translateX(110%); } }
+/* 眨眼：三次（第 15/43/137 帧，即 0.35s 一次），每次闭 11 帧、开 10 帧。压到 .23 是那份
+   Lottie 的实测值 —— 它的眨眼是椭圆路径自己的形变，峰值时包围盒只有睁眼时的 23%。
+   两条缓动也是从它的逐帧数据拟合的，不是随手挑的 ease-in-out。 */
+@keyframes trace-face-blink {
+  0%, 1.667% { transform: scaleY(1); animation-timing-function: cubic-bezier(.4, .05, .53, 1); }
+  6.25% { transform: scaleY(.23); animation-timing-function: cubic-bezier(.45, 0, .6, .95); }
+  10.417%, 13.333% { transform: scaleY(1); animation-timing-function: cubic-bezier(.4, .05, .53, 1); }
+  17.917% { transform: scaleY(.23); animation-timing-function: cubic-bezier(.45, 0, .6, .95); }
+  22.083%, 52.5% { transform: scaleY(1); animation-timing-function: cubic-bezier(.4, .05, .53, 1); }
+  57.083% { transform: scaleY(.23); animation-timing-function: cubic-bezier(.45, 0, .6, .95); }
+  61.25%, 100% { transform: scaleY(1); }
+}
+/* 眼珠三个位置：中 → 右上（想一下，停 1 秒）→ 左下 → 回中。位移照 Lottie 里眼睛图层的
+   平移换算（+42,-10 与 0,+50.8 世界单位 = 脸半径 9.3 的 0.14 / 0.19 倍）；区间那条曲线
+   是从它逐帧包围盒拟合的 cubic-bezier（末段与保持段不写缓动 —— 两端同值时它不起作用）。 */
+@keyframes trace-face-look {
+  0%, 15% { transform: translate(0, 0); animation-timing-function: cubic-bezier(.95, 0, .2, 1); }
+  27.917% { transform: translate(1.29px, -.31px); }
+  52.5% { transform: translate(1.29px, -.31px); animation-timing-function: cubic-bezier(.85, 0, 0, .8); }
+  62.917% { transform: translate(0, 1.56px); }
+  80.417% { transform: translate(0, 1.56px); animation-timing-function: cubic-bezier(.85, 0, 0, 1); }
+  92.917%, 100% { transform: translate(0, 0); }
+}
+/* 眉：左眉下沉、右眉上挑（同一拍的两种表情），到后半程各自回位。位移同样换算自 Lottie，
+   缓动借的是同一段时间轴里眼珠的曲线 —— 那份文件里它们本就是同一个手势的组成部分。 */
+@keyframes trace-face-brow-l {
+  0%, 15.833% { transform: translateY(0); animation-timing-function: cubic-bezier(.95, 0, .2, 1); }
+  28.333% { transform: translateY(2.03px); }
+  52.5% { transform: translateY(2.03px); animation-timing-function: cubic-bezier(.85, 0, 0, .8); }
+  62.083%, 100% { transform: translateY(0); }
+}
+@keyframes trace-face-brow-r {
+  0%, 15.833% { transform: translateY(0); animation-timing-function: cubic-bezier(.95, 0, .2, 1); }
+  28.333% { transform: translateY(-2.09px); }
+  52.5% { transform: translateY(-2.09px); animation-timing-function: cubic-bezier(.85, 0, 0, .8); }
+  62.083%, 100% { transform: translateY(0); }
+}
+/* 环往外扩只占一轮的头三分之一（4.8s 里的 1.6s，即 33.333%）：扩满即透明、余下
+   三分之二静默 —— 三枚各差 1.6s，就接成一条不断的波浪（见上面那条规则的注释）。 */
+@keyframes trace-agent-ring { 0% { opacity: .5; transform: scale(.94); } 33.333% { opacity: 0; transform: scale(1.45); } 100% { opacity: 0; transform: scale(1.45); } }
+/* 刚写出来的那句话从强调色沉回正文色。终点就是它在 .trace-step-body 上的静止色，
+   所以动画结束后什么都不用回滚。 */
+@keyframes trace-step-land { from { color: var(--conversation-accent); } to { color: var(--conversation-muted-strong); } }
+
 /* The actions are hover-revealed on the row, and 重新生成 only exists on the last
    assistant message (需求 §10 / 真实应用 assistant-action-bar）—— so a failed
    answer is re-run from the bottom, not from the middle of the transcript. */
@@ -2975,7 +2965,7 @@ body.wv-resizing { user-select: none; cursor: col-resize; }
 /* Light glass conversation */
 
 /* Dark glass conversation */
-.conversation-theme.dark { --conversation-text: rgba(255,255,255,.93); --conversation-muted: rgba(255,255,255,.48); --conversation-muted-strong: rgba(255,255,255,.7); --conversation-accent: #b9c0f5; --conversation-accent-soft: rgba(120,130,237,.18); --conversation-success: #79d39b; --conversation-success-soft: rgba(121,211,155,.14); --conversation-danger: #e7a374; --conversation-danger-soft: rgba(217,142,95,.16); --conversation-border: rgba(255,255,255,.11); --conversation-hairline: rgba(255,255,255,.11); --conversation-border-strong: rgba(255,255,255,.2); --conversation-surface: rgba(22,23,29,.74); --conversation-selected: rgba(120,130,237,.14); --conversation-control: rgba(255,255,255,.055); --conversation-control-hover: rgba(255,255,255,.1); --conversation-assistant: rgba(255,255,255,.06); --conversation-thinking: rgba(32,34,44,.76); --conversation-user: linear-gradient(135deg,#d98e5f,#efb08a); --conversation-user-text: #24160e; --conversation-source: rgba(255,255,255,.055); --conversation-composer: rgba(18,19,24,.94); --conversation-send: #efb08a; --conversation-send-text: #24160e; --conversation-shadow: rgba(0,0,0,.28); background: radial-gradient(circle at 72% 10%,rgba(79,80,150,.3),transparent 38%), linear-gradient(135deg,#13141a,#0e0f14 60%,#191419); color: var(--conversation-text); }
+.conversation-theme.dark { --conversation-text: rgba(255,255,255,.93); --conversation-muted: rgba(255,255,255,.48); --conversation-muted-strong: rgba(255,255,255,.7); --conversation-accent: #b9c0f5; --conversation-accent-soft: rgba(120,130,237,.18); --conversation-success: #79d39b; --conversation-success-soft: rgba(121,211,155,.14); --conversation-danger: #e7a374; --conversation-danger-soft: rgba(217,142,95,.16); --conversation-border: rgba(255,255,255,.11); --conversation-hairline: rgba(255,255,255,.11); --conversation-border-strong: rgba(255,255,255,.2); --conversation-surface: rgba(22,23,29,.74); --conversation-selected: rgba(120,130,237,.14); --conversation-control: rgba(255,255,255,.055); --conversation-control-hover: rgba(255,255,255,.1); --conversation-assistant: rgba(255,255,255,.06); --conversation-user: linear-gradient(135deg,#d98e5f,#efb08a); --conversation-user-text: #24160e; --conversation-source: rgba(255,255,255,.055); --conversation-composer: rgba(18,19,24,.94); --conversation-send: #efb08a; --conversation-send-text: #24160e; --conversation-shadow: rgba(0,0,0,.28); background: radial-gradient(circle at 72% 10%,rgba(79,80,150,.3),transparent 38%), linear-gradient(135deg,#13141a,#0e0f14 60%,#191419); color: var(--conversation-text); }
 .conversation-theme.dark .conversation-view { border: 1px solid rgba(255,255,255,.13); box-shadow: 0 24px 70px rgba(0,0,0,.38), inset 0 1px 0 rgba(255,255,255,.08); backdrop-filter: blur(18px) saturate(140%); }
 
 /* Neutral gray conversation surfaces, purple accents.
@@ -3024,7 +3014,7 @@ body.wv-resizing { user-select: none; cursor: col-resize; }
       value is already translucent, so it worked as either; a WHITE rim cannot.
       A white line and a white grid gutter are both erased lines. Every consumer
       that draws a LINE — grid gutters, header and toolbar rules, the
-      thinking-step connector, scrollbar thumbs, the progress-bar track — was
+      thinking trace's spine, scrollbar thumbs, the progress-bar track — was
       repointed at --conversation-hairline. Light and dark got that token at
       their existing --conversation-border value, so they fit exactly.
 
@@ -3035,15 +3025,18 @@ body.wv-resizing { user-select: none; cursor: col-resize; }
       against a translucent white pane is no bar at all — hence the override
       below. If a new consumer appears, check whether it is a fill or a line.
 
-   --conversation-assistant and --conversation-thinking must stay COLOURS: they
-   are interpolated inside `linear-gradient(135deg, var(--conversation-thinking),
-   var(--conversation-assistant))` in .thinking-panel. --conversation-selected is
-   the exception that may hold a whole layered gradient list, because all three of
-   its consumers are `background:` declarations. --conversation-shadow must stay a
-   colour: it is the colour inside `box-shadow: 0 N M var(--conversation-shadow)`.
-   The coloured status tokens (success/danger and their -soft partners) are left
+   --conversation-assistant must stay a COLOUR: it is what a bubble is filled
+   with. --conversation-selected is the exception that may hold a whole layered
+   gradient list, because all three of its consumers are `background:`
+   declarations. --conversation-shadow must stay a colour: it is the colour inside
+   `box-shadow: 0 N M var(--conversation-shadow)`.
+   (--conversation-thinking went with .thinking-panel: the thinking trace is a
+   bare column now, not a filled card, so nothing interpolates a second colour
+   into a gradient any more — see .trace below.) */
+
+/* The coloured status tokens (success/danger and their -soft partners) are left
    alone — they are meaning, not material. */
-.conversation-theme.gray { --conversation-text: #25252c; --conversation-muted: #8a8992; --conversation-muted-strong: #5f5e68; --conversation-accent: #5b52c4; --conversation-accent-soft: rgba(255,255,255,.48); --conversation-success: #318759; --conversation-success-soft: #e8f4ed; --conversation-danger: #ae5e5e; --conversation-danger-soft: #f9ecec; --conversation-border: rgba(255,255,255,.86); --conversation-hairline: #e6e6e6; --conversation-border-strong: rgba(255,255,255,.95); --conversation-surface: rgba(255,255,255,.72); --conversation-selected: linear-gradient(180deg,rgba(255,255,255,.62),rgba(255,255,255,0) 56%), linear-gradient(135deg,rgba(255,255,255,.5),rgba(255,255,255,.16)), linear-gradient(180deg,rgba(214,214,214,.5),rgba(214,214,214,.22)); --conversation-control: rgba(255,255,255,.48); --conversation-control-hover: rgba(255,255,255,.8); --conversation-assistant: rgba(255,255,255,.72); --conversation-thinking: rgba(255,255,255,.55); --conversation-user: #1c1c1c; --conversation-user-text: #fff; --conversation-source: rgba(255,255,255,.62); --conversation-composer: rgba(255,255,255,.82); --conversation-send: var(--gy-send); --conversation-send-text: #fff; --conversation-shadow: rgba(72,72,72,.12); background: #f1f1f1; /* Raised above the shell's decorative blobs, which are `position: fixed; z-index: 0` on body::before/::after. ::after is body's LAST child in paint order, so at equal z-index it paints on top of #root, and its lavender radial-gradient (rgba(210,185,239,.34), 520px, blur 110px, top-right) was tinting this screen's top-right corner to rgb(238,235,241) — a pale periwinkle that reaches the screen but is painted by an element outside this theme's reach. Measured, not assumed: hiding body::before/::after made those pixels chroma 0, and this rule reproduced it (83.6% -> 96.8% of the view exactly neutral). ::before is body's FIRST child so it paints underneath and never showed; the welcome screen's .gy-page already carries z-index: 1 and was never affected. Scoped to .gray because in light and dark those blobs are the intended decoration. .theme-toggle is z-index: 100, so it stays above this. */ position: relative; z-index: 1; color: var(--conversation-text); }
+.conversation-theme.gray { --conversation-text: #25252c; --conversation-muted: #8a8992; --conversation-muted-strong: #5f5e68; --conversation-accent: #5b52c4; --conversation-accent-soft: rgba(255,255,255,.48); --conversation-success: #318759; --conversation-success-soft: #e8f4ed; --conversation-danger: #ae5e5e; --conversation-danger-soft: #f9ecec; --conversation-border: rgba(255,255,255,.86); --conversation-hairline: #e6e6e6; --conversation-border-strong: rgba(255,255,255,.95); --conversation-surface: rgba(255,255,255,.72); --conversation-selected: linear-gradient(180deg,rgba(255,255,255,.62),rgba(255,255,255,0) 56%), linear-gradient(135deg,rgba(255,255,255,.5),rgba(255,255,255,.16)), linear-gradient(180deg,rgba(214,214,214,.5),rgba(214,214,214,.22)); --conversation-control: rgba(255,255,255,.48); --conversation-control-hover: rgba(255,255,255,.8); --conversation-assistant: rgba(255,255,255,.72); --conversation-user: #1c1c1c; --conversation-user-text: #fff; --conversation-source: rgba(255,255,255,.62); --conversation-composer: rgba(255,255,255,.82); --conversation-send: var(--gy-send); --conversation-send-text: #fff; --conversation-shadow: rgba(72,72,72,.12); background: #f1f1f1; /* Raised above the shell's decorative blobs, which are `position: fixed; z-index: 0` on body::before/::after. ::after is body's LAST child in paint order, so at equal z-index it paints on top of #root, and its lavender radial-gradient (rgba(210,185,239,.34), 520px, blur 110px, top-right) was tinting this screen's top-right corner to rgb(238,235,241) — a pale periwinkle that reaches the screen but is painted by an element outside this theme's reach. Measured, not assumed: hiding body::before/::after made those pixels chroma 0, and this rule reproduced it (83.6% -> 96.8% of the view exactly neutral). ::before is body's FIRST child so it paints underneath and never showed; the welcome screen's .gy-page already carries z-index: 1 and was never affected. Scoped to .gray because in light and dark those blobs are the intended decoration. .theme-toggle is z-index: 100, so it stays above this. */ position: relative; z-index: 1; color: var(--conversation-text); }
 /* The page pane, wearing .gy-sidebar's recipe — a lit crown over a low-alpha
    body, a hairline rim, the four-part elevation, and the same blur strength as
    every other gray glass surface. The body alpha stays low on purpose: the point
@@ -3085,12 +3078,9 @@ body.wv-resizing { user-select: none; cursor: col-resize; }
    floating control.
 
    Everything else in this theme is deliberately NOT here: chips, tiles, tabs and
-   the metric rows inside .thinking-panel are flat fills by design, and giving
-   them all a drop shadow would turn a dense transcript into a pile of tiles. */
-.conversation-theme.gray .message-bubble,
-.conversation-theme.gray .thinking-panel,
-.conversation-theme.gray .thinking-team,
-.conversation-theme.gray .thinking-metric {
+   the thinking trace's rows are flat fills by design, and giving them all a drop
+   shadow would turn a dense transcript into a pile of tiles. */
+.conversation-theme.gray .message-bubble {
   box-shadow: var(--gy-shadow-sm);
 }
 
@@ -3138,21 +3128,6 @@ body.wv-resizing { user-select: none; cursor: col-resize; }
   box-shadow: 0 1px 2px rgba(24,24,24,.04), 0 3px 8px rgba(72,72,72,.06);
 }
 
-/* The step dots sit ON the thinking panel's own white, so --conversation-border-
-   strong (.95 white) would leave them as white circles with an invisible rim,
-   and the connector line behind them would read as running straight through. A
-   rim cannot be lighter than the thing it rings; here the dot is the LIGHTER
-   element, so it takes the hairline and reads as a punched hole in the line.
-   The `:not()`s are load-bearing, and the rule was wrong without them. This is a
-   statement about the RESTING dot — a punched hole is what an unlit dot looks
-   like — but the selector has the same specificity as the .active and .complete
-   rules below it (three classes either way) and sits later in the sheet, so it
-   won in every state: in this theme the current step's rim never took the
-   accent and a finished step's rim never took the success green. Only the glyph
-   colour and the halo moved, which left the line's strongest state marker
-   frozen while everything else changed around it. */
-.conversation-theme.gray .thinking-step:not(.active):not(.complete) .thinking-step-dot { border-color: var(--conversation-hairline); }
-
 /* --conversation-accent-soft is a translucent white in this theme, because every
    one of its other consumers is a tile or chip fill sitting ON a pane. This one
    is a 2px bar, and a translucent white bar against a translucent white pane is
@@ -3172,18 +3147,12 @@ body.wv-resizing { user-select: none; cursor: col-resize; }
   .conversation-grid, .conversation-grid.no-inspector { grid-template-columns: minmax(0, 1fr); }.session-sidebar, .project-inspector { display: none; }
   .message-viewport { padding-left: 14px; padding-right: 14px; }.conversation-composer { width: calc(100% - 20px); margin-bottom: 10px; }
 }
-@media (max-width: 520px) {
-  .thinking-panel { padding: 11px 11px 10px; }
-  .thinking-panel-head { align-items: flex-start; }
-  .thinking-agent-rail { flex-direction: column; gap: 2px; overflow-x: visible; }
-  .thinking-agent-chip { flex: none; padding: 5px 7px; }
-  .thinking-step-line { gap: 5px; }
-  .thinking-step { font-size: 8.5px; }
-  .thinking-step-dot { width: 16px; height: 16px; }
-  .thinking-step-rail { margin-right: -5px; }
-  .thinking-details { grid-template-columns: 1fr; }
-}
 @media (prefers-reduced-motion: reduce) {
-  .thinking-panel, .thinking-panel::after, .thinking-team::before, .thinking-live-dot > span, .thinking-agent-running > span, .thinking-agent-avatar, .thinking-agent-dot, .thinking-step.active .thinking-step-dot, .thinking-step.complete .thinking-step-dot, .thinking-current-pulse { animation: none !important; }
-  .thinking-details-toggle svg:last-child, .thinking-agent-caret, .thinking-metric, .thinking-step-rail::after { transition: none; }
+  /* 轨迹的每段动效都在这里关掉：入场、错峰、展开折叠、脉冲、外扩的环、颜色沉降。
+     展开折叠尤其要关 —— 它是唯一一个会推动布局的，开着就是「内容在动」。 */
+  .trace, .trace-stream-body.is-open .trace-step, .trace-agent-detail, .trace-details, .trace-step.active .trace-mark-dot, .trace-team-pulse, .trace.live .trace-agent-avatar::after, .trace-step.active .trace-step-body, .trace.live .trace-face-shift, .trace.live .trace-face-eye, .trace.live .trace-face-brow-l, .trace.live .trace-face-brow-r { animation: none !important; }
+  /* 轮流是动效；关掉之后只留「轮到谁」的那枚静态环，另外两枚的伪元素不生成 ——
+     否则 reduced-motion 下三枚一起戴上紫环，比动效还吵。 */
+  .trace.live .trace-agent-avatar:not(.active)::after { content: none; }
+  .trace-body, .trace-caret, .trace-stream-body, .trace-stream-caret, .trace-agent-caret, .trace-details-toggle svg, .trace-step-title { transition: none; }
 }
