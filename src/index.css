@@ -2597,7 +2597,6 @@ body.wv-resizing { user-select: none; cursor: col-resize; }
   justify-content: space-between;
   gap: 18px;
   padding: 0 22px;
-  border-bottom: 1px solid var(--conversation-hairline);
 }
 .conversation-header-left, .conversation-header-actions { display: flex; align-items: center; gap: 12px; min-width: 0; }
 /* 标题从左侧组里出来、绝对居中（真实应用就是这条 absolute 居中的写法）。两侧
@@ -2612,11 +2611,13 @@ body.wv-resizing { user-select: none; cursor: col-resize; }
 .conversation-icon-btn.small { width: 27px; height: 27px; border-radius: 8px; }
 .conversation-icon-btn:hover { color: var(--conversation-text); background: var(--conversation-control-hover); border-color: var(--conversation-border-strong); }
 /* 三栏从静态 grid 换成 flex：两侧可拖、可收起，分界条自己占 12px（真实应用里
-   w-3 那条）。grid 自己的背景还留着——它铺满整块，在 12px 的缝里显形（灰色主题
-   下面有一层 scrim 覆盖）。收起走宽度过渡，面板内层钉住原宽，外层裁掉超出的部分，
-   所以收起来是「滑出去」而不是「被压扁」；overflow-x 用 clip 是为了不裁掉会话行
-   的浮层菜单（它要探出面板顶在别的栏上）。 */
-.conversation-grid { min-height: 0; flex: 1; display: flex; align-items: stretch; background: var(--conversation-hairline); }
+   w-3 那条）。整块不画底、顶部也不留边距：缝里透出来的是 view 自己，左右下留
+   12px（真实应用 PanelGroup 的 `p-3 pt-0`）—— 顶部、左侧列表、底部因此和 view
+   连成一整片，只有中栏是嵌进去的对比色圆角卡（见下面三栏的面）。收起走宽度
+   过渡，面板内层钉住原宽，外层裁掉超出的部分，所以收起来是「滑出去」而不是
+   「被压扁」；overflow-x 用 clip 是为了不裁掉会话行的浮层菜单（它要探出面板
+   顶在别的栏上）。 */
+.conversation-grid { min-height: 0; flex: 1; display: flex; align-items: stretch; padding: 0 12px 12px; }
 .conversation-pane { display: flex; flex: none; min-width: 0; overflow-x: clip; transition: width 180ms ease; }
 .conversation-pane-inspector { justify-content: flex-end; }
 .conversation-pane-inner { height: 100%; display: flex; flex: none; }
@@ -2625,13 +2626,20 @@ body.wv-resizing { user-select: none; cursor: col-resize; }
 .conversation-pane-inspector .conversation-pane-inner { width: 352px; }
 .conversation-divider { position: relative; flex: none; width: 12px; cursor: col-resize; touch-action: none; transition: width 180ms ease; }
 .conversation-divider::after { content: ''; position: absolute; top: 0; bottom: 0; left: 50%; width: 4px; transform: translateX(-50%); border-radius: 999px; background: transparent; transition: background 140ms ease; }
-/* 线色用 border-strong：缝底本身就是 hairline 色（还叠着灰主题的 scrim），
-   同色画上去等于没画；border-strong 在两套主题里都比它亮一档。 */
+/* 线色用 border-strong：缝里透出来的是 view 的玻璃面（真实应用的 handle 平时
+   也是全透明，零可见分隔），border-strong 在两套主题里都比它亮一档，hover /
+   拖拽时那条 4px 细线才浮得出来。 */
 .conversation-divider:hover::after, .conversation-divider.dragging::after { background: var(--conversation-border-strong); }
 body.conversation-resizing { user-select: none; cursor: col-resize; }
 body.conversation-resizing .conversation-pane { transition: none; }
-.session-sidebar, .chat-column, .project-inspector { min-width: 0; min-height: 0; background: var(--conversation-surface); border-radius: 16px; }
-.chat-column { flex: 1 1 0; }
+/* 三栏的面（真实应用的对位：左栏透明、中栏 bg-background、右栏 bg-card）。
+   左栏和顶部、底部同属 view 那一整片，所以不画底也不留圆角；中栏用
+   --conversation-chat 嵌成一张对比色的圆角卡；右栏还是 surface 玻璃，
+   叠在卡片上只白一档。 */
+.session-sidebar, .chat-column, .project-inspector { min-width: 0; min-height: 0; }
+.chat-column, .project-inspector { border-radius: 16px; }
+.chat-column { flex: 1 1 0; background: var(--conversation-chat); }
+.project-inspector { background: var(--conversation-surface); }
 .session-sidebar { display: flex; flex-direction: column; padding: 18px 12px 14px; }
 .session-sidebar-head, .inspector-title { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .session-sidebar-head { padding: 0 6px 12px; color: var(--conversation-text); font-weight: 650; }
@@ -3022,7 +3030,7 @@ body.conversation-resizing .conversation-pane { transition: none; }
 /* Light glass conversation */
 
 /* Dark glass conversation */
-.conversation-theme.dark { --conversation-text: rgba(255,255,255,.93); --conversation-muted: rgba(255,255,255,.48); --conversation-muted-strong: rgba(255,255,255,.7); --conversation-accent: #b9c0f5; --conversation-accent-soft: rgba(120,130,237,.18); --conversation-success: #79d39b; --conversation-success-soft: rgba(121,211,155,.14); --conversation-danger: #e7a374; --conversation-danger-soft: rgba(217,142,95,.16); --conversation-border: rgba(255,255,255,.11); --conversation-hairline: rgba(255,255,255,.11); --conversation-border-strong: rgba(255,255,255,.2); --conversation-surface: rgba(22,23,29,.74); --conversation-selected: rgba(120,130,237,.14); --conversation-control: rgba(255,255,255,.055); --conversation-control-hover: rgba(255,255,255,.1); --conversation-assistant: rgba(255,255,255,.06); --conversation-user: linear-gradient(135deg,#d98e5f,#efb08a); --conversation-user-text: #24160e; --conversation-source: rgba(255,255,255,.055); --conversation-composer: rgba(18,19,24,.94); --conversation-send: #efb08a; --conversation-send-text: #24160e; --conversation-shadow: rgba(0,0,0,.28); background: radial-gradient(circle at 72% 10%,rgba(79,80,150,.3),transparent 38%), linear-gradient(135deg,#13141a,#0e0f14 60%,#191419); color: var(--conversation-text); }
+.conversation-theme.dark { --conversation-text: rgba(255,255,255,.93); --conversation-muted: rgba(255,255,255,.48); --conversation-muted-strong: rgba(255,255,255,.7); --conversation-accent: #b9c0f5; --conversation-accent-soft: rgba(120,130,237,.18); --conversation-success: #79d39b; --conversation-success-soft: rgba(121,211,155,.14); --conversation-danger: #e7a374; --conversation-danger-soft: rgba(217,142,95,.16); --conversation-border: rgba(255,255,255,.11); --conversation-hairline: rgba(255,255,255,.11); --conversation-border-strong: rgba(255,255,255,.2); --conversation-surface: rgba(22,23,29,.74); --conversation-chat: #13141a; --conversation-selected: rgba(120,130,237,.14); --conversation-control: rgba(255,255,255,.055); --conversation-control-hover: rgba(255,255,255,.1); --conversation-assistant: rgba(255,255,255,.06); --conversation-user: linear-gradient(135deg,#d98e5f,#efb08a); --conversation-user-text: #24160e; --conversation-source: rgba(255,255,255,.055); --conversation-composer: rgba(18,19,24,.94); --conversation-send: #efb08a; --conversation-send-text: #24160e; --conversation-shadow: rgba(0,0,0,.28); background: radial-gradient(circle at 72% 10%,rgba(79,80,150,.3),transparent 38%), linear-gradient(135deg,#13141a,#0e0f14 60%,#191419); color: var(--conversation-text); }
 .conversation-theme.dark .conversation-view { border: 1px solid rgba(255,255,255,.13); box-shadow: 0 24px 70px rgba(0,0,0,.38), inset 0 1px 0 rgba(255,255,255,.08); backdrop-filter: blur(18px) saturate(140%); }
 
 /* Neutral gray conversation surfaces, purple accents.
@@ -3093,7 +3101,7 @@ body.conversation-resizing .conversation-pane { transition: none; }
 
 /* The coloured status tokens (success/danger and their -soft partners) are left
    alone — they are meaning, not material. */
-.conversation-theme.gray { --conversation-text: #25252c; --conversation-muted: #8a8992; --conversation-muted-strong: #5f5e68; --conversation-accent: #5b52c4; --conversation-accent-soft: rgba(255,255,255,.48); --conversation-success: #318759; --conversation-success-soft: #e8f4ed; --conversation-danger: #ae5e5e; --conversation-danger-soft: #f9ecec; --conversation-border: rgba(255,255,255,.86); --conversation-hairline: #e6e6e6; --conversation-border-strong: rgba(255,255,255,.95); --conversation-surface: rgba(255,255,255,.72); --conversation-selected: linear-gradient(180deg,rgba(255,255,255,.62),rgba(255,255,255,0) 56%), linear-gradient(135deg,rgba(255,255,255,.5),rgba(255,255,255,.16)), linear-gradient(180deg,rgba(214,214,214,.5),rgba(214,214,214,.22)); --conversation-control: rgba(255,255,255,.48); --conversation-control-hover: rgba(255,255,255,.8); --conversation-assistant: rgba(255,255,255,.72); --conversation-user: #1c1c1c; --conversation-user-text: #fff; --conversation-source: rgba(255,255,255,.62); --conversation-composer: rgba(255,255,255,.82); --conversation-send: var(--gy-send); --conversation-send-text: #fff; --conversation-shadow: rgba(72,72,72,.12); background: #f1f1f1; /* Raised above the shell's decorative blobs, which are `position: fixed; z-index: 0` on body::before/::after. ::after is body's LAST child in paint order, so at equal z-index it paints on top of #root, and its lavender radial-gradient (rgba(210,185,239,.34), 520px, blur 110px, top-right) was tinting this screen's top-right corner to rgb(238,235,241) — a pale periwinkle that reaches the screen but is painted by an element outside this theme's reach. Measured, not assumed: hiding body::before/::after made those pixels chroma 0, and this rule reproduced it (83.6% -> 96.8% of the view exactly neutral). ::before is body's FIRST child so it paints underneath and never showed; the welcome screen's .gy-page already carries z-index: 1 and was never affected. Scoped to .gray because in light and dark those blobs are the intended decoration. .theme-toggle is z-index: 100, so it stays above this. */ position: relative; z-index: 1; color: var(--conversation-text); }
+.conversation-theme.gray { --conversation-text: #25252c; --conversation-muted: #8a8992; --conversation-muted-strong: #5f5e68; --conversation-accent: #5b52c4; --conversation-accent-soft: rgba(255,255,255,.48); --conversation-success: #318759; --conversation-success-soft: #e8f4ed; --conversation-danger: #ae5e5e; --conversation-danger-soft: #f9ecec; --conversation-border: rgba(255,255,255,.86); --conversation-hairline: #e6e6e6; --conversation-border-strong: rgba(255,255,255,.95); --conversation-surface: rgba(255,255,255,.72); --conversation-chat: var(--gy-bg); --conversation-selected: linear-gradient(180deg,rgba(255,255,255,.62),rgba(255,255,255,0) 56%), linear-gradient(135deg,rgba(255,255,255,.5),rgba(255,255,255,.16)), linear-gradient(180deg,rgba(214,214,214,.5),rgba(214,214,214,.22)); --conversation-control: rgba(255,255,255,.48); --conversation-control-hover: rgba(255,255,255,.8); --conversation-assistant: rgba(255,255,255,.72); --conversation-user: #1c1c1c; --conversation-user-text: #fff; --conversation-source: rgba(255,255,255,.62); --conversation-composer: rgba(255,255,255,.82); --conversation-send: var(--gy-send); --conversation-send-text: #fff; --conversation-shadow: rgba(72,72,72,.12); background: #f1f1f1; /* Raised above the shell's decorative blobs, which are `position: fixed; z-index: 0` on body::before/::after. ::after is body's LAST child in paint order, so at equal z-index it paints on top of #root, and its lavender radial-gradient (rgba(210,185,239,.34), 520px, blur 110px, top-right) was tinting this screen's top-right corner to rgb(238,235,241) — a pale periwinkle that reaches the screen but is painted by an element outside this theme's reach. Measured, not assumed: hiding body::before/::after made those pixels chroma 0, and this rule reproduced it (83.6% -> 96.8% of the view exactly neutral). ::before is body's FIRST child so it paints underneath and never showed; the welcome screen's .gy-page already carries z-index: 1 and was never affected. Scoped to .gray because in light and dark those blobs are the intended decoration. .theme-toggle is z-index: 100, so it stays above this. */ position: relative; z-index: 1; color: var(--conversation-text); }
 /* The page pane, wearing .gy-sidebar's recipe — a lit crown over a low-alpha
    body, a hairline rim, the four-part elevation, and the same blur strength as
    every other gray glass surface. The body alpha stays low on purpose: the point
@@ -3113,17 +3121,6 @@ body.conversation-resizing .conversation-pane { transition: none; }
     0 2px 6px rgba(38,38,38,.05);
   backdrop-filter: blur(18px) saturate(180%);
 }
-
-/* The 1px grid gutter is the one line in here that is a PANE EDGE rather than a
-   hairline inside a surface, and --conversation-hairline cannot serve it: that
-   token is opaque, and the grid's own background paints across the full grid
-   box — every pane would sit on flat #e6e6e6 and the silk would stop at the
-   page's 16px padding, which is the opposite of glass. This scrim is neutral
-   (R = G = B) and translucent, so the panes refract the silk and the gutter
-   darkens with the band behind it instead of being a fixed ink. It composites to
-   ~232 against ~249 for the panes above it: a 17-level rule, the same reach as
-   the #e4e4e4-on-#fbfbfb (23 levels) it replaces. */
-.conversation-theme.gray .conversation-grid { background: rgba(0,0,0,.06); }
 
 /* Cards that sit ON the pane. They need the home page's elevation for the same
    reason the home page's cards do, only more so: a rim does not draw itself, and

@@ -404,8 +404,11 @@ function ThinkingTrace({ live, stopped, startedAt, endedAt }: { live: boolean; s
 
 /* 三栏的宽度契约照真实应用的 resizable panel 抄：会话栏 13/17/30rem、
    右侧面板 18/22/44rem、中栏底线 24rem（1rem = 16px）；分界条 12px 即它的 w-3。
-   拖动只改像素值，所以这些常量就是四边边界。 */
+   GRID_PAD_X 是 .conversation-grid 左右各 12px 的内边距（真实应用 `p-3 pt-0`），
+   clientWidth 把它算在内，拖拽的天花板要先刨掉它。拖动只改像素值，所以这些
+   常量就是四边边界。 */
 const DIVIDER_WIDTH = 12
+const GRID_PAD_X = 12
 const SESSIONS_MIN = 208
 const SESSIONS_DEFAULT = 272
 const SESSIONS_MAX = 480
@@ -624,7 +627,7 @@ export default function ConversationView({
     setSessionsWidth(current => {
       const base = current ?? sessionsPaneRef.current?.clientWidth ?? SESSIONS_DEFAULT
       const other = showInspector ? (inspectorPaneRef.current?.clientWidth ?? INSPECTOR_DEFAULT) : 0
-      const ceiling = Math.min(SESSIONS_MAX, grid.clientWidth - other - DIVIDER_WIDTH * (showInspector ? 2 : 1) - CHAT_MIN)
+      const ceiling = Math.min(SESSIONS_MAX, grid.clientWidth - GRID_PAD_X * 2 - other - DIVIDER_WIDTH * (showInspector ? 2 : 1) - CHAT_MIN)
       return clamp(base + delta, SESSIONS_MIN, Math.max(SESSIONS_MIN, ceiling))
     })
   }
@@ -635,7 +638,7 @@ export default function ConversationView({
     setInspectorWidth(current => {
       const base = current ?? inspectorPaneRef.current?.clientWidth ?? INSPECTOR_DEFAULT
       const other = showSessions ? (sessionsPaneRef.current?.clientWidth ?? SESSIONS_DEFAULT) : 0
-      const ceiling = Math.min(INSPECTOR_MAX, grid.clientWidth - other - DIVIDER_WIDTH * (showSessions ? 2 : 1) - CHAT_MIN)
+      const ceiling = Math.min(INSPECTOR_MAX, grid.clientWidth - GRID_PAD_X * 2 - other - DIVIDER_WIDTH * (showSessions ? 2 : 1) - CHAT_MIN)
       return clamp(base - delta, INSPECTOR_MIN, Math.max(INSPECTOR_MIN, ceiling))
     })
   }
