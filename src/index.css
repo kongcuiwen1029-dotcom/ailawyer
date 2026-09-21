@@ -2648,14 +2648,18 @@ body.conversation-resizing .conversation-pane { transition: none; }
    透明的 —— 参考图里它和背景分毫不差，只靠 rim 圈出边界；中卡 --conversation-
    card 是实色 #121419（顶到底恒定）；右卡 --conversation-card-inspector 自带
    纵向渐变（顶 #1f212d 亮、中部暗到 #13151a、底部微回升到 #16151b —— 参考图
-   里背景的紫光被它压掉了，所以它不是半透明玻璃）。灰色主题只定义 sidebar
-   一个（2026-09-21 用户「左边卡和右边卡保持一致，以右边为准」）：丝绸图左上
-   是一片 253 的过曝平区、右卡背后的右侧才是 235 上下的暗调 —— 同一张白玻璃
-   透出来左边死白、右边有层次；补偿值是一条淡压暗（顶 1.2% → 底 4% 黑）：首版
-   顶 2.2% → 底 7% 对齐到右卡 ±1 阶，用户看图后嫌灰（「颜色改白一点」）减到约
-   半。inspector 仍不定义、落到 --conversation-card（纯白玻璃，view 旧配方原
-   值）。rim 复用 --conversation-border（两主题同 token），阴影 / blur 也各有
-   token（深色轻投影、灰色 blur 18px）。 */
+   里背景的紫光被它压掉了，所以它不是半透明玻璃）。灰色主题定义 sidebar 与
+   column 两个：左卡（2026-09-21「左边卡和右边卡保持一致，以右边为准」）——
+   丝绸图左上是一片 253 的过曝平区、右卡背后的右侧才是 235 上下的暗调，同一
+   张白玻璃透出来左边死白、右边有层次；补偿值是一条淡压暗（顶 1.2% → 底 4%
+   黑）：首版顶 2.2% → 底 7% 对齐到右卡 ±1 阶，用户看图后嫌灰（「颜色改白一
+   点」）减到约半。中卡（同日后一轮「换种中间这个卡片的样式试一下」）——中卡
+   背后是背景的上亮下暗段（250 → 239，跨 11.6 阶），而基准配方顶实底透，透出
+   来是「上死白、下发灰」的 12 阶纵向渐变；column 的白罩曲线（顶 46% → 45%
+   处 34% → 底 68%）与背景反向，纵向跨度压到 2.5 阶、下半提白 9 阶，顶部留一
+   丝纹理。inspector 不定义、落到 --conversation-card（纯白玻璃，view 旧配方
+   原值）。rim 复用 --conversation-border（两主题同 token），阴影 / blur 也各
+   有 token（深色轻投影、灰色 blur 18px）。 */
 .session-sidebar, .chat-column, .project-inspector {
   min-width: 0;
   min-height: 0;
@@ -2665,7 +2669,7 @@ body.conversation-resizing .conversation-pane { transition: none; }
   box-shadow: var(--conversation-card-shadow);
   backdrop-filter: var(--conversation-card-blur);
 }
-.chat-column { flex: 1 1 0; }
+.chat-column { flex: 1 1 0; background: var(--conversation-card-column, var(--conversation-card)); }
 .session-sidebar { display: flex; flex-direction: column; padding: 18px 12px 14px; background: var(--conversation-card-sidebar, var(--conversation-card)); }
 .session-sidebar-head, .inspector-title { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .session-sidebar-head { padding: 0 6px 12px; color: var(--conversation-text); font-weight: 650; }
@@ -3172,7 +3176,7 @@ body.conversation-resizing .conversation-pane { transition: none; }
 
 /* The coloured status tokens (success/danger and their -soft partners) are left
    alone — they are meaning, not material. */
-.conversation-theme.gray { --conversation-text: #25252c; --conversation-muted: #8a8992; --conversation-muted-strong: #5f5e68; --conversation-accent: #5b52c4; --conversation-accent-soft: rgba(255,255,255,.48); --conversation-success: #318759; --conversation-success-soft: #e8f4ed; --conversation-danger: #ae5e5e; --conversation-danger-soft: #f9ecec; --conversation-border: rgba(255,255,255,.86); --conversation-hairline: #e6e6e6; --conversation-border-strong: rgba(255,255,255,.95); --conversation-surface: rgba(255,255,255,.72); --conversation-card: linear-gradient(180deg,rgba(255,255,255,.5),rgba(255,255,255,0) 30%), linear-gradient(180deg,rgba(255,255,255,.26),rgba(255,255,255,.08)); --conversation-card-sidebar: linear-gradient(180deg,rgba(0,0,0,.012),rgba(0,0,0,.024) 50%,rgba(0,0,0,.04)), var(--conversation-card); --conversation-card-shadow: inset 0 1px 0 rgba(255,255,255,.92), inset 0 -1px 0 rgba(255,255,255,.4), 0 20px 44px rgba(38,38,38,.11), 0 2px 6px rgba(38,38,38,.05); --conversation-card-blur: blur(18px) saturate(180%); --conversation-selected: linear-gradient(180deg,rgba(255,255,255,.62),rgba(255,255,255,0) 56%), linear-gradient(135deg,rgba(255,255,255,.5),rgba(255,255,255,.16)), linear-gradient(180deg,rgba(214,214,214,.5),rgba(214,214,214,.22)); --conversation-control: rgba(255,255,255,.48); --conversation-control-hover: rgba(255,255,255,.8); --conversation-assistant: rgba(255,255,255,.72); --conversation-user: #1c1c1c; --conversation-user-text: #fff; --conversation-source: rgba(255,255,255,.62); --conversation-composer: rgba(255,255,255,.82); --conversation-send: var(--gy-send); --conversation-send-text: #fff; --conversation-shadow: rgba(72,72,72,.12); background: #f1f1f1; /* Raised above the shell's decorative blobs, which are `position: fixed; z-index: 0` on body::before/::after. ::after is body's LAST child in paint order, so at equal z-index it paints on top of #root, and its lavender radial-gradient (rgba(210,185,239,.34), 520px, blur 110px, top-right) was tinting this screen's top-right corner to rgb(238,235,241) — a pale periwinkle that reaches the screen but is painted by an element outside this theme's reach. Measured, not assumed: hiding body::before/::after made those pixels chroma 0, and this rule reproduced it (83.6% -> 96.8% of the view exactly neutral). ::before is body's FIRST child so it paints underneath and never showed; the welcome screen's .gy-page already carries z-index: 1 and was never affected. Scoped to .gray because in light and dark those blobs are the intended decoration. .theme-toggle is z-index: 100, so it stays above this. */ position: relative; z-index: 1; color: var(--conversation-text); }
+.conversation-theme.gray { --conversation-text: #25252c; --conversation-muted: #8a8992; --conversation-muted-strong: #5f5e68; --conversation-accent: #5b52c4; --conversation-accent-soft: rgba(255,255,255,.48); --conversation-success: #318759; --conversation-success-soft: #e8f4ed; --conversation-danger: #ae5e5e; --conversation-danger-soft: #f9ecec; --conversation-border: rgba(255,255,255,.86); --conversation-hairline: #e6e6e6; --conversation-border-strong: rgba(255,255,255,.95); --conversation-surface: rgba(255,255,255,.72); --conversation-card: linear-gradient(180deg,rgba(255,255,255,.5),rgba(255,255,255,0) 30%), linear-gradient(180deg,rgba(255,255,255,.26),rgba(255,255,255,.08)); --conversation-card-sidebar: linear-gradient(180deg,rgba(0,0,0,.012),rgba(0,0,0,.024) 50%,rgba(0,0,0,.04)), var(--conversation-card); --conversation-card-column: linear-gradient(180deg,rgba(255,255,255,.46),rgba(255,255,255,.34) 45%,rgba(255,255,255,.68)); --conversation-card-shadow: inset 0 1px 0 rgba(255,255,255,.92), inset 0 -1px 0 rgba(255,255,255,.4), 0 20px 44px rgba(38,38,38,.11), 0 2px 6px rgba(38,38,38,.05); --conversation-card-blur: blur(18px) saturate(180%); --conversation-selected: linear-gradient(180deg,rgba(255,255,255,.62),rgba(255,255,255,0) 56%), linear-gradient(135deg,rgba(255,255,255,.5),rgba(255,255,255,.16)), linear-gradient(180deg,rgba(214,214,214,.5),rgba(214,214,214,.22)); --conversation-control: rgba(255,255,255,.48); --conversation-control-hover: rgba(255,255,255,.8); --conversation-assistant: rgba(255,255,255,.72); --conversation-user: #1c1c1c; --conversation-user-text: #fff; --conversation-source: rgba(255,255,255,.62); --conversation-composer: rgba(255,255,255,.82); --conversation-send: var(--gy-send); --conversation-send-text: #fff; --conversation-shadow: rgba(72,72,72,.12); background: #f1f1f1; /* Raised above the shell's decorative blobs, which are `position: fixed; z-index: 0` on body::before/::after. ::after is body's LAST child in paint order, so at equal z-index it paints on top of #root, and its lavender radial-gradient (rgba(210,185,239,.34), 520px, blur 110px, top-right) was tinting this screen's top-right corner to rgb(238,235,241) — a pale periwinkle that reaches the screen but is painted by an element outside this theme's reach. Measured, not assumed: hiding body::before/::after made those pixels chroma 0, and this rule reproduced it (83.6% -> 96.8% of the view exactly neutral). ::before is body's FIRST child so it paints underneath and never showed; the welcome screen's .gy-page already carries z-index: 1 and was never affected. Scoped to .gray because in light and dark those blobs are the intended decoration. .theme-toggle is z-index: 100, so it stays above this. */ position: relative; z-index: 1; color: var(--conversation-text); }
 /* Cards that sit ON the pane. They need the home page's elevation for the same
    reason the home page's cards do, only more so: a rim does not draw itself, and
    here the fill is a 0.72 white on a pane that is itself a 0.72 white — the
