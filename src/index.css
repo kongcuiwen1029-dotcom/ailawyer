@@ -28,6 +28,27 @@ body,
   --shadow-shell: 0 30px 72px rgba(112, 96, 173, 0.09);
   --shadow-panel: 0 12px 28px rgba(103, 88, 166, 0.06);
   --shadow-float: 0 12px 24px rgba(95, 86, 184, 0.14);
+  /* Liquid-glass rim — one 1px ring whose colour travels around the edge, so all
+     four sides weigh the same. 定义原在 .dk-root；2026-09-21 会话页的 composer
+     与知识库 chip 也要同一条环（用户：「第二个输入框的样式参考第一个」），
+     提到全局让两处一起继承。用户 2026-09-17：深色版的 composer、chip、快捷
+     pill「顶部的边框更粗一点」。那三个组件原本各自写着
+     `border: 1px solid rgba(255,255,255,.16)` + `box-shadow: inset 0 1px 0 …`
+     （外加 .dk-composer 的 ::before 亮线），于是顶边是「边框 + 内侧高光」两条
+     1px 叠在一起，比另外三边亮一倍、也看着粗一倍。
+     环由共用的 ::before 规则画（见 .dk-composer::before 组）：`padding: 1px` +
+     mask 挖空中间，只留最外一圈 1px，颜色沿 145deg 从左上受光走到右下。灰度
+     贴着原来的 0.16 上下走——左上最亮 0.30，右下压到 0.06，末端回到 0.18 收口，
+     免得右下角的边缘整个消失、玻璃看上去缺一条边。
+     **不能用 background-clip 分层来画这个环**：那种做法的渐变层会铺满整个
+     border-box，而 chip 与 pill 的填充几乎全透明（2%~13% 的白），底下这层白会
+     整个透上来把填充提亮——用户 2026-09-17 紧接着就指出了「这几个填充色不要
+     改」。mask 是唯一能把环限制在边缘的写法。 */
+  --dk-glass-rim: linear-gradient(145deg,
+    rgba(255, 255, 255, 0.30),
+    rgba(255, 255, 255, 0.13) 38%,
+    rgba(255, 255, 255, 0.06) 72%,
+    rgba(255, 255, 255, 0.18));
 }
 
 * {
@@ -168,25 +189,6 @@ body::after {
     radial-gradient(circle at 52% 26%, rgba(255, 255, 255, 0.06), transparent 24%),
     linear-gradient(180deg, #2e2f33 0%, #0b0b0f 32%, #040507 100%);
 
-  /* Liquid-glass rim — one 1px ring whose colour travels around the edge, so all
-     four sides weigh the same. 用户 2026-09-17：深色版的 composer、chip、快捷
-     pill「顶部的边框更粗一点」。那三个组件原本各自写着
-     `border: 1px solid rgba(255,255,255,.16)` + `box-shadow: inset 0 1px 0 …`
-     （外加 .dk-composer 的 ::before 亮线），于是顶边是「边框 + 内侧高光」两条
-     1px 叠在一起，比另外三边亮一倍、也看着粗一倍。
-     环由下面那条共用的 ::before 规则画：`padding: 1px` + mask 挖空中间，只留
-     最外一圈 1px，颜色沿 145deg 从左上受光走到右下。灰度贴着原来的 0.16 上下
-     走——左上最亮 0.30，右下压到 0.06，末端回到 0.18 收口，免得右下角的边缘
-     整个消失、玻璃看上去缺一条边。
-     **不能用 background-clip 分层来画这个环**：那种做法的渐变层会铺满整个
-     border-box，而 chip 与 pill 的填充几乎全透明（2%~13% 的白），底下这层白会
-     整个透上来把填充提亮——用户 2026-09-17 紧接着就指出了「这几个填充色不要
-     改」。mask 是唯一能把环限制在边缘的写法。 */
-  --dk-glass-rim: linear-gradient(145deg,
-    rgba(255, 255, 255, 0.30),
-    rgba(255, 255, 255, 0.13) 38%,
-    rgba(255, 255, 255, 0.06) 72%,
-    rgba(255, 255, 255, 0.18));
 }
 
 /* Left organic glass orb */
@@ -401,22 +403,26 @@ body::after {
   z-index: 1;
 }
 
-/* The 1px liquid-glass rim, shared by the three dark glass controls (composer,
-   knowledge-base chip, quick pills). `padding: 1px` plus a mask that punches the
-   centre out leaves only the outermost ring, so the gradient stops at the edge
-   and never touches the fill. Drawing it as a background layer with a border-box
-   clip would blanket the whole box instead — and since the chip and pill fills are
-   only 2%~13% white, that blanket reads straight through them and lightens the
-   fill, which is exactly what 用户 2026-09-17 flagged as「这几个填充色不要改」.
-   `inset: 0` lands on the padding box, i.e. the first pixel inside the 1px
-   transparent border; the fill still covers that border pixel, so no gap shows.
+/* The 1px liquid-glass rim, shared by the dark glass controls (welcome: composer,
+   knowledge-base chip, quick pills; conversation: composer, knowledge-base chip —
+   added 2026-09-21 so the two composers read as one family). `padding: 1px` plus a
+   mask that punches the centre out leaves only the outermost ring, so the gradient
+   stops at the edge and never touches the fill. Drawing it as a background layer
+   with a border-box clip would blanket the whole box instead — and since the chip
+   and pill fills are only 2%~13% white, that blanket reads straight through them
+   and lightens the fill, which is exactly what 用户 2026-09-17 flagged as
+   「这几个填充色不要改」. `inset: 0` lands on the padding box, i.e. the first pixel
+   inside the 1px transparent border; the fill still covers that border pixel, so
+   no gap shows.
    z-index lifts it over .dk-composer::after's colour spots.
    `-webkit-mask` is understood by Chrome, Safari and Firefox (as an alias), while
    `mask-composite: exclude` is the standard spelling Firefox needs — the
    non-standard `-webkit-mask-composite: xor` is what Chrome and Safari honour. */
 .dk-composer::before,
 .dk-chip::before,
-.dk-quick-pill::before {
+.dk-quick-pill::before,
+.conversation-theme.dark .conversation-composer::before,
+.conversation-theme.dark .composer-kb::before {
   content: '';
   position: absolute;
   inset: 0;
@@ -2966,15 +2972,22 @@ body.conversation-resizing .conversation-pane { transition: none; }
 .message-actions { display: flex; gap: 3px; margin-top: 5px; opacity: 0; transition: opacity 140ms ease; }
 .message-row:hover .message-actions, .message-actions:focus-within { opacity: 1; }
 .message-actions button { width: 25px; height: 23px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 6px; color: var(--conversation-muted); background: transparent; cursor: pointer; }.message-actions button:hover { color: var(--conversation-text); background: var(--conversation-control-hover); }
-.conversation-composer { width: min(760px, calc(100% - 36px)); flex: none; margin: 0 auto 18px; padding: 10px 12px 9px; border: 1px solid var(--conversation-border-strong); border-radius: 15px; background: var(--conversation-composer); box-shadow: 0 8px 28px var(--conversation-shadow); }
-/* Knowledge-base toggle (需求 §3.1). It rides the composer's tool-button
-   geometry; the pressed state is what carries meaning, so it is keyed off
-   aria-pressed like the home screen's chip. */
-.composer-kb { color: var(--conversation-muted); }
-.composer-kb[aria-pressed='true'] { color: var(--conversation-accent); background: var(--conversation-accent-soft); }
-.conversation-composer textarea { width: 100%; min-height: 43px; resize: none; border: 0; outline: 0; color: var(--conversation-text); background: transparent; font: inherit; font-size: 13px; line-height: 1.55; }.conversation-composer textarea::placeholder { color: var(--conversation-muted); }
-.composer-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 7px; }.composer-tools { display: flex; gap: 3px; }.composer-tools button { display: inline-flex; align-items: center; gap: 5px; padding: 6px 7px; border: 0; border-radius: 7px; color: var(--conversation-muted); background: transparent; cursor: pointer; font: inherit; font-size: 10.5px; }.composer-tools button:hover { color: var(--conversation-text); background: var(--conversation-control-hover); }
-.composer-send, .composer-stop { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 0; cursor: pointer; font: inherit; }.composer-send { width: 30px; height: 30px; border-radius: 9px; color: var(--conversation-send-text); background: var(--conversation-send); }.composer-send:disabled { opacity: .35; cursor: not-allowed; }.composer-stop { padding: 7px 10px; border-radius: 8px; color: var(--conversation-danger); background: var(--conversation-danger-soft); font-size: 10.5px; }
+/* 与欢迎页 .dk-composer 同几何（2026-09-21 用户：「第二个输入框的样式参考第一
+   个」）：24px 圆角、20/20/14 内边距。宽度与底距仍是会话页自己的——每边 18px
+   内缩是消息列对齐契约，不动。overflow 裁住深色下的 ::after 色斑，环与色斑都
+   在圆角内。 */
+.conversation-composer { position: relative; overflow: hidden; width: min(760px, calc(100% - 36px)); flex: none; margin: 0 auto 18px; padding: 20px 20px 14px; border: 1px solid var(--conversation-border-strong); border-radius: 24px; background: var(--conversation-composer); box-shadow: 0 8px 28px var(--conversation-shadow); }
+/* Knowledge-base toggle (需求 §3.1). Pill geometry comes from .composer-tools
+   button; the per-theme fill and colour live with the rest of the composer in the
+   theme blocks below, matching the home screen's chip — the pressed state is what
+   carries meaning, and it is keyed off aria-pressed like the home screen's. */
+/* 16px/1.6 与 .dk-composer-input / .gy-composer-input 同一档；position/z-index
+   把文字抬到深色 ::after 色斑之上（同 .dk-composer-body 的做法）。 */
+.conversation-composer textarea { position: relative; z-index: 1; width: 100%; min-height: 43px; resize: none; border: 0; outline: 0; color: var(--conversation-text); background: transparent; font: inherit; font-size: 16px; line-height: 1.6; }.conversation-composer textarea::placeholder { color: var(--conversation-muted); }
+/* 底行 14px 的间距 = .dk-composer 的 grid gap；chip 的 9/14 药丸、15px/600、
+   gap 8 照 .dk-chip。position/z-index 同 textarea，抬到深色色斑之上。 */
+.composer-actions { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 14px; }.composer-tools { display: flex; gap: 8px; }.composer-tools button { position: relative; z-index: 1; display: inline-flex; align-items: center; gap: 8px; padding: 9px 14px; border: 1px solid transparent; border-radius: 999px; color: var(--conversation-muted); background: transparent; cursor: pointer; font: inherit; font-size: 15px; font-weight: 600; transition: background 160ms ease, color 160ms ease; }.composer-tools button:hover { color: var(--conversation-text); background: var(--conversation-control-hover); }
+.composer-send, .composer-stop { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 0; cursor: pointer; font: inherit; }.composer-send { width: 42px; height: 42px; border-radius: 50%; color: var(--conversation-send-text); background: var(--conversation-send); transition: transform 140ms ease, box-shadow 140ms ease; }.composer-send:disabled { opacity: .35; cursor: not-allowed; }.composer-stop { padding: 7px 10px; border-radius: 8px; color: var(--conversation-danger); background: var(--conversation-danger-soft); font-size: 10.5px; }
 .project-inspector { overflow-y: auto; padding: 19px 15px; background: var(--conversation-card-inspector, var(--conversation-card)); scrollbar-width: thin; scrollbar-color: var(--conversation-hairline) transparent; }.project-inspector::-webkit-scrollbar { width: 6px; }.project-inspector::-webkit-scrollbar-thumb { border-radius: 5px; background: var(--conversation-hairline); }
 .inspector-section { padding-bottom: 18px; margin-bottom: 17px; border-bottom: 1px solid var(--conversation-hairline); }
 /* 这条 hairline 分隔 section；最后一个下面没有内容可分，会成一条悬空的收尾线
@@ -3047,6 +3060,45 @@ body.conversation-resizing .conversation-pane { transition: none; }
 
 /* Dark glass conversation */
 .conversation-theme.dark { --conversation-text: rgba(255,255,255,.93); --conversation-muted: rgba(255,255,255,.48); --conversation-muted-strong: rgba(255,255,255,.7); --conversation-accent: #b9c0f5; --conversation-accent-soft: rgba(120,130,237,.18); --conversation-success: #79d39b; --conversation-success-soft: rgba(121,211,155,.14); --conversation-danger: #e7a374; --conversation-danger-soft: rgba(217,142,95,.16); --conversation-border: rgba(255,255,255,.11); --conversation-hairline: rgba(255,255,255,.11); --conversation-border-strong: rgba(255,255,255,.2); --conversation-surface: rgba(22,23,29,.74); --conversation-card: #121419; --conversation-card-sidebar: transparent; --conversation-card-inspector: linear-gradient(180deg,#1f212d 0%,#13151a 57%,#16151b 78%); --conversation-card-shadow: 0 12px 30px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.05); --conversation-card-blur: none; --conversation-selected: rgba(120,130,237,.14); --conversation-control: rgba(255,255,255,.055); --conversation-control-hover: rgba(255,255,255,.1); --conversation-assistant: rgba(255,255,255,.06); --conversation-user: linear-gradient(135deg,#d98e5f,#efb08a); --conversation-user-text: #24160e; --conversation-source: rgba(255,255,255,.055); --conversation-composer: rgba(18,19,24,.94); --conversation-send: #efb08a; --conversation-send-text: #24160e; --conversation-shadow: rgba(0,0,0,.28); background: radial-gradient(101.5% 118.4% at 73.6% 9.2%,rgba(101,103,248,.206),transparent 37.5%), radial-gradient(29.3% 37.2% at 90.6% 3.5%,rgba(255,255,255,.105),transparent 79.6%), linear-gradient(180deg,#13141c 0%,#0e0f17 100%); color: var(--conversation-text); }
+
+/* 会话页的输入框整体对齐欢迎页 .dk-composer（2026-09-21 用户：「第二个输入框
+   的样式参考第一个」）：玻璃双层填充、1px 渐变环（环由上面共用的 ::before 组
+   画）、内部色斑、暖橙发送键，逐值照搬。宽度与底距不动（消息列对齐契约）。
+   知识库 chip 同步对齐 .dk-chip：开启态就是默认玻璃（带紫调的那层），关闭态
+   把填充收平成 4% 白、文字退到 .5。 */
+.conversation-theme.dark .conversation-composer {
+  border-color: transparent;
+  background:
+    linear-gradient(180deg, rgba(40,41,46,.8), rgba(18,19,23,.82)),
+    linear-gradient(135deg, rgba(255,255,255,.08), rgba(255,255,255,.01));
+  box-shadow: inset 0 -40px 80px rgba(0,0,0,.34), 0 18px 34px rgba(0,0,0,.34);
+  backdrop-filter: blur(18px) saturate(145%);
+}
+.conversation-theme.dark .conversation-composer::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(circle at 20% 16%, rgba(120,130,237,.18), transparent 20%),
+    radial-gradient(circle at 78% 90%, rgba(217,142,95,.14), transparent 18%),
+    linear-gradient(180deg, rgba(255,255,255,.05), transparent 22%);
+}
+.conversation-theme.dark .conversation-composer textarea::placeholder { color: rgba(255,255,255,.56); }
+.conversation-theme.dark .composer-kb {
+  border-color: transparent;
+  color: rgba(255,255,255,.84);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.1), rgba(255,255,255,.05)),
+    linear-gradient(135deg, rgba(91,99,211,.12), rgba(255,255,255,.04));
+  backdrop-filter: blur(18px) saturate(145%);
+}
+.conversation-theme.dark .composer-kb:hover {
+  background-image:
+    linear-gradient(180deg, rgba(255,255,255,.15), rgba(255,255,255,.08)),
+    linear-gradient(135deg, rgba(91,99,211,.18), rgba(255,255,255,.06));
+  color: rgba(255,255,255,.96);
+}
+.conversation-theme.dark .composer-kb[aria-pressed='false'] { background-color: rgba(255,255,255,.04); background-image: none; color: rgba(255,255,255,.5); }
+.conversation-theme.dark .composer-send { color: #111; background: linear-gradient(135deg,#d98e5f,#efb08a); box-shadow: 0 14px 28px rgba(217,142,95,.28); }
+.conversation-theme.dark .composer-send:hover:not(:disabled) { transform: scale(1.07); box-shadow: 0 16px 32px rgba(217,142,95,.38); }
 
 /* Neutral gray conversation surfaces, purple accents.
    The accent family is a darkened copy of the light theme's #655dc4. That is
@@ -3135,6 +3187,17 @@ body.conversation-resizing .conversation-pane { transition: none; }
 
 .conversation-theme.gray .conversation-composer,
 .conversation-theme.gray .conversation-dialog { box-shadow: var(--gy-shadow-md); }
+
+/* 灰色下同样对齐欢迎页 .gy-composer / .gy-chip（2026-09-21 用户：「第二个输入框
+   的样式参考第一个」）：composer 的 .82 白换成 --gy-surface、描边换成 --gy-border
+   （白玻璃配方原值，与欢迎页一致）；chip 换成 .gy-chip 的白玻璃药丸与它的
+   hover/关闭态。发送键颜色走 --conversation-send（= --gy-send），几何已在基础
+   规则里随 .gy-send-button 对齐成 42px 圆形。 */
+.conversation-theme.gray .conversation-composer { background: var(--gy-surface); border-color: var(--gy-border); }
+.conversation-theme.gray .conversation-composer textarea::placeholder { color: var(--gy-text-3); }
+.conversation-theme.gray .composer-kb { background: var(--gy-surface-2); border-color: var(--gy-border); color: var(--gy-text-2); }
+.conversation-theme.gray .composer-kb:hover { background: var(--gy-bg); color: var(--gy-text); box-shadow: 0 2px 6px rgba(72,72,72,.12), 0 8px 18px rgba(72,72,72,.08); }
+.conversation-theme.gray .composer-kb[aria-pressed='false'] { color: var(--gy-text-3); }
 
 /* Every dialog in the gray theme is the same white. 2026-09-17 用户以工作区弹窗
    (.gy-main .wv-modal) 为基准要求「所有弹窗的白色透明度参考这个图」，而会话视图
