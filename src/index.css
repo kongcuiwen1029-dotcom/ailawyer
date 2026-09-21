@@ -2637,11 +2637,15 @@ body.wv-resizing { user-select: none; cursor: col-resize; }
 body.conversation-resizing { user-select: none; cursor: col-resize; }
 body.conversation-resizing .conversation-pane { transition: none; }
 /* 三张卡（2026-09-21 用户第二轮）：顶部和背景是一整片，左会话列表 / 中思考
-   过程 / 右资产调试各自是一张 16px 圆角的卡浮在上面。卡面走 --conversation-
-   card：深色下是比背景亮一档的渐变面，灰色下是纯白玻璃（view 旧配方原值）；
-   rim 复用 --conversation-border（两主题同 token），阴影 / blur 也各有 token
-   （深色 none、灰色 blur 18px）。深色的 --conversation-selected 同时升级成
-   紫渐变，选中项在渐变卡上才立得住。 */
+   过程 / 右资产调试各自是一张 16px 圆角的卡浮在上面。深色下三张卡不是同一种
+   面（第四刀按用户参考图逐像素对齐）：左卡 --conversation-card-sidebar 是
+   透明的 —— 参考图里它和背景分毫不差，只靠 rim 圈出边界；中卡 --conversation-
+   card 是实色 #121419（顶到底恒定）；右卡 --conversation-card-inspector 自带
+   纵向渐变（顶 #1f212d 亮、中部暗到 #13151a、底部微回升到 #16151b —— 参考图
+   里背景的紫光被它压掉了，所以它不是半透明玻璃）。灰色主题不定义这两个新
+   token，落到 var() 的 fallback = --conversation-card（纯白玻璃，view 旧配方
+   原值），三卡仍同一张面。rim 复用 --conversation-border（两主题同 token），
+   阴影 / blur 也各有 token（深色轻投影、灰色 blur 18px）。 */
 .session-sidebar, .chat-column, .project-inspector {
   min-width: 0;
   min-height: 0;
@@ -2652,7 +2656,7 @@ body.conversation-resizing .conversation-pane { transition: none; }
   backdrop-filter: var(--conversation-card-blur);
 }
 .chat-column { flex: 1 1 0; }
-.session-sidebar { display: flex; flex-direction: column; padding: 18px 12px 14px; }
+.session-sidebar { display: flex; flex-direction: column; padding: 18px 12px 14px; background: var(--conversation-card-sidebar, var(--conversation-card)); }
 .session-sidebar-head, .inspector-title { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .session-sidebar-head { padding: 0 6px 12px; color: var(--conversation-text); font-weight: 650; }
 .session-item-wrap { position: relative; }
@@ -2971,7 +2975,7 @@ body.conversation-resizing .conversation-pane { transition: none; }
 .conversation-composer textarea { width: 100%; min-height: 43px; resize: none; border: 0; outline: 0; color: var(--conversation-text); background: transparent; font: inherit; font-size: 13px; line-height: 1.55; }.conversation-composer textarea::placeholder { color: var(--conversation-muted); }
 .composer-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 7px; }.composer-tools { display: flex; gap: 3px; }.composer-tools button { display: inline-flex; align-items: center; gap: 5px; padding: 6px 7px; border: 0; border-radius: 7px; color: var(--conversation-muted); background: transparent; cursor: pointer; font: inherit; font-size: 10.5px; }.composer-tools button:hover { color: var(--conversation-text); background: var(--conversation-control-hover); }
 .composer-send, .composer-stop { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 0; cursor: pointer; font: inherit; }.composer-send { width: 30px; height: 30px; border-radius: 9px; color: var(--conversation-send-text); background: var(--conversation-send); }.composer-send:disabled { opacity: .35; cursor: not-allowed; }.composer-stop { padding: 7px 10px; border-radius: 8px; color: var(--conversation-danger); background: var(--conversation-danger-soft); font-size: 10.5px; }
-.project-inspector { overflow-y: auto; padding: 19px 15px; scrollbar-width: thin; scrollbar-color: var(--conversation-hairline) transparent; }.project-inspector::-webkit-scrollbar { width: 6px; }.project-inspector::-webkit-scrollbar-thumb { border-radius: 5px; background: var(--conversation-hairline); }
+.project-inspector { overflow-y: auto; padding: 19px 15px; background: var(--conversation-card-inspector, var(--conversation-card)); scrollbar-width: thin; scrollbar-color: var(--conversation-hairline) transparent; }.project-inspector::-webkit-scrollbar { width: 6px; }.project-inspector::-webkit-scrollbar-thumb { border-radius: 5px; background: var(--conversation-hairline); }
 .inspector-section { padding-bottom: 18px; margin-bottom: 17px; border-bottom: 1px solid var(--conversation-hairline); }
 /* 这条 hairline 分隔 section；最后一个下面没有内容可分，会成一条悬空的收尾线
    （资产与调试两个页签都会露出来）。只清掉线，padding/margin 的留白不动。 */
@@ -3042,7 +3046,7 @@ body.conversation-resizing .conversation-pane { transition: none; }
 /* Light glass conversation */
 
 /* Dark glass conversation */
-.conversation-theme.dark { --conversation-text: rgba(255,255,255,.93); --conversation-muted: rgba(255,255,255,.48); --conversation-muted-strong: rgba(255,255,255,.7); --conversation-accent: #b9c0f5; --conversation-accent-soft: rgba(120,130,237,.18); --conversation-success: #79d39b; --conversation-success-soft: rgba(121,211,155,.14); --conversation-danger: #e7a374; --conversation-danger-soft: rgba(217,142,95,.16); --conversation-border: rgba(255,255,255,.11); --conversation-hairline: rgba(255,255,255,.11); --conversation-border-strong: rgba(255,255,255,.2); --conversation-surface: rgba(22,23,29,.74); --conversation-card: linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,0) 40%,rgba(0,0,0,.1)), #1a1c33; --conversation-card-shadow: 0 18px 44px rgba(0,0,0,.36), inset 0 1px 0 rgba(255,255,255,.06); --conversation-card-blur: none; --conversation-selected: linear-gradient(135deg,rgba(120,130,237,.32),rgba(120,130,237,.12)); --conversation-control: rgba(255,255,255,.055); --conversation-control-hover: rgba(255,255,255,.1); --conversation-assistant: rgba(255,255,255,.06); --conversation-user: linear-gradient(135deg,#d98e5f,#efb08a); --conversation-user-text: #24160e; --conversation-source: rgba(255,255,255,.055); --conversation-composer: rgba(18,19,24,.94); --conversation-send: #efb08a; --conversation-send-text: #24160e; --conversation-shadow: rgba(0,0,0,.28); background: radial-gradient(120% 60% at 50% -8%,rgba(110,114,220,.32),transparent 60%), linear-gradient(180deg,#212445 0%,#14162c 50%,#0d0e1c 100%); color: var(--conversation-text); }
+.conversation-theme.dark { --conversation-text: rgba(255,255,255,.93); --conversation-muted: rgba(255,255,255,.48); --conversation-muted-strong: rgba(255,255,255,.7); --conversation-accent: #b9c0f5; --conversation-accent-soft: rgba(120,130,237,.18); --conversation-success: #79d39b; --conversation-success-soft: rgba(121,211,155,.14); --conversation-danger: #e7a374; --conversation-danger-soft: rgba(217,142,95,.16); --conversation-border: rgba(255,255,255,.11); --conversation-hairline: rgba(255,255,255,.11); --conversation-border-strong: rgba(255,255,255,.2); --conversation-surface: rgba(22,23,29,.74); --conversation-card: #121419; --conversation-card-sidebar: transparent; --conversation-card-inspector: linear-gradient(180deg,#1f212d 0%,#13151a 57%,#16151b 78%); --conversation-card-shadow: 0 12px 30px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.05); --conversation-card-blur: none; --conversation-selected: rgba(120,130,237,.14); --conversation-control: rgba(255,255,255,.055); --conversation-control-hover: rgba(255,255,255,.1); --conversation-assistant: rgba(255,255,255,.06); --conversation-user: linear-gradient(135deg,#d98e5f,#efb08a); --conversation-user-text: #24160e; --conversation-source: rgba(255,255,255,.055); --conversation-composer: rgba(18,19,24,.94); --conversation-send: #efb08a; --conversation-send-text: #24160e; --conversation-shadow: rgba(0,0,0,.28); background: radial-gradient(101.5% 118.4% at 73.6% 9.2%,rgba(101,103,248,.206),transparent 37.5%), radial-gradient(29.3% 37.2% at 90.6% 3.5%,rgba(255,255,255,.105),transparent 79.6%), linear-gradient(180deg,#13141c 0%,#0e0f17 100%); color: var(--conversation-text); }
 
 /* Neutral gray conversation surfaces, purple accents.
    The accent family is a darkened copy of the light theme's #655dc4. That is
