@@ -402,6 +402,58 @@ function ThinkingTrace({ live, stopped, startedAt, endedAt }: { live: boolean; s
   )
 }
 
+/* 三栏的宽度契约照真实应用的 resizable panel 抄：会话栏 13/17/30rem、
+   右侧面板 18/22/44rem、中栏底线 24rem（1rem = 16px）；分界条 12px 即它的 w-3。
+   拖动只改像素值，所以这些常量就是四边边界。 */
+const DIVIDER_WIDTH = 12
+const SESSIONS_MIN = 208
+const SESSIONS_DEFAULT = 272
+const SESSIONS_MAX = 480
+const INSPECTOR_MIN = 288
+const INSPECTOR_DEFAULT = 352
+const INSPECTOR_MAX = 704
+const CHAT_MIN = 384
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value))
+}
+
+/* 两栏之间的可拖分界：12px 宽的透明缝，hover 或拖动时才浮出中间那条 4px 细线。
+   收起时宽度收到 0（有过渡），所以它始终留在 DOM 里，只是窄到点不着。拖动期给
+   body 挂 conversation-resizing：关掉面板的宽度过渡（否则每帧都落后指针 180ms），
+   并让指针移出分界条后细线仍然亮着。 */
+function ConversationDivider({ label, collapsed, onDrag }: { label: string; collapsed: boolean; onDrag: (delta: number) => void }) {
+  return (
+    <div
+      aria-hidden={collapsed || undefined}
+      aria-label={label}
+      aria-orientation="vertical"
+      className="conversation-divider"
+      onPointerDown={event => {
+        event.preventDefault()
+        const divider = event.currentTarget
+        let last = event.clientX
+        const move = (moveEvent: PointerEvent) => {
+          onDrag(moveEvent.clientX - last)
+          last = moveEvent.clientX
+        }
+        const stop = () => {
+          window.removeEventListener('pointermove', move)
+          window.removeEventListener('pointerup', stop)
+          document.body.classList.remove('conversation-resizing')
+          divider.classList.remove('dragging')
+        }
+        window.addEventListener('pointermove', move)
+        window.addEventListener('pointerup', stop)
+        document.body.classList.add('conversation-resizing')
+        divider.classList.add('dragging')
+      }}
+      role="separator"
+      style={collapsed ? { width: 0 } : undefined}
+    />
+  )
+}
+
 export default function ConversationView({
   project,
   conversations,
@@ -423,6 +475,9 @@ export default function ConversationView({
   const [knowledgeBase, setKnowledgeBase] = useState(true)
   const [showSessions, setShowSessions] = useState(true)
   const [showInspector, setShowInspector] = useState(true)
+  /* null = 还没拖过，宽度由 CSS 给（含 1120px 断点下的收窄）；拖动一旦发生就定成像素值。 */
+  const [sessionsWidth, setSessionsWidth] = useState<number | null>(null)
+  const [inspectorWidth, setInspectorWidth] = useState<number | null>(null)
   const [inspectorTab, setInspectorTab] = useState<'assets' | 'debug'>('assets')
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
   const [renamingId, setRenamingId] = useState<string | null>(null)
@@ -439,6 +494,9 @@ export default function ConversationView({
   const endRef = useRef<HTMLDivElement>(null)
   const caseFileInputRef = useRef<HTMLInputElement>(null)
   const wasGeneratingRef = useRef(false)
+  const gridRef = useRef<HTMLDivElement>(null)
+  const sessionsPaneRef = useRef<HTMLDivElement>(null)
+  const inspectorPaneRef = useRef<HTMLDivElement>(null)
 
   const activeConversation = conversations.find(item => item.id === activeConversationId) ?? null
   const messages = activeConversation?.messages ?? []
@@ -499,12 +557,11 @@ export default function ConversationView({
   /* 还在跑的那一条永远是 pending 里最后一条。收尾（无论是接到回复还是被停掉）之后
      这里就是 null，于是屏幕上不会再有活着的轨迹。 */
   const liveRecord = isGenerating ? activeTraces.pending[activeTraces.pending.length - 1] : null
-  /* 一条只有轨迹的 assistant 行：和别的 assistant 行同一个骨架（头像 + 内容列），
+  /* 一条只有轨迹的 assistant 行：和别的 assistant 行同一个骨架（内容列），
      只是正文还没到（或不会到了）。它不是组件，就是一个画行的小函数 —— 写成组件的话
      每次 render 都会换一个类型，那一行会被整个卸载重挂，入场动画会重播。 */
   const traceRow = (record: TraceRecord) => (
     <article className="message-row assistant" key={record.startedAt}>
-      <div className="message-avatar"><Bot size={15} strokeWidth={1.8} /></div>
       <div className="message-content">
         <ThinkingTrace live={record === liveRecord} stopped={record.stopped} startedAt={record.startedAt} endedAt={record.endedAt} />
       </div>
@@ -558,6 +615,34 @@ export default function ConversationView({
 
   const enterToSend = useEnterToSend(submit)
 
+  /* 拖动的天花板：另一侧的实际宽 + 两条分界 + 中栏 384 的底线，所以窄窗口里拖到
+     头就停住，不会把中栏挤没。未拖过时宽度由 CSS 决定，先问面板要 clientWidth；
+     拖动一旦发生就固定为像素值，不再跟断点走。 */
+  const dragSessions = (delta: number) => {
+    const grid = gridRef.current
+    if (!grid) return
+    setSessionsWidth(current => {
+      const base = current ?? sessionsPaneRef.current?.clientWidth ?? SESSIONS_DEFAULT
+      const other = showInspector ? (inspectorPaneRef.current?.clientWidth ?? INSPECTOR_DEFAULT) : 0
+      const ceiling = Math.min(SESSIONS_MAX, grid.clientWidth - other - DIVIDER_WIDTH * (showInspector ? 2 : 1) - CHAT_MIN)
+      return clamp(base + delta, SESSIONS_MIN, Math.max(SESSIONS_MIN, ceiling))
+    })
+  }
+
+  const dragInspector = (delta: number) => {
+    const grid = gridRef.current
+    if (!grid) return
+    setInspectorWidth(current => {
+      const base = current ?? inspectorPaneRef.current?.clientWidth ?? INSPECTOR_DEFAULT
+      const other = showSessions ? (sessionsPaneRef.current?.clientWidth ?? SESSIONS_DEFAULT) : 0
+      const ceiling = Math.min(INSPECTOR_MAX, grid.clientWidth - other - DIVIDER_WIDTH * (showSessions ? 2 : 1) - CHAT_MIN)
+      return clamp(base - delta, INSPECTOR_MIN, Math.max(INSPECTOR_MIN, ceiling))
+    })
+  }
+
+  const sessionsWidthStyle = sessionsWidth === null ? undefined : { width: sessionsWidth }
+  const inspectorWidthStyle = inspectorWidth === null ? undefined : { width: inspectorWidth }
+
   return (
     <>
     <div className="conversation-view">
@@ -566,14 +651,14 @@ export default function ConversationView({
           <button className="conversation-icon-btn" onClick={onBack} aria-label="返回项目列表" title="返回项目列表">
             <ArrowLeft size={17} strokeWidth={1.9} />
           </button>
-          <div className="conversation-heading">
-            <h1>{project.name}</h1>
-          </div>
-        </div>
-        <div className="conversation-header-actions">
           <button className="conversation-icon-btn" onClick={() => setShowSessions(value => !value)} aria-label={showSessions ? '收起会话列表' : '展开会话列表'} title={showSessions ? '收起会话列表' : '展开会话列表'}>
             <PanelLeftClose size={16} strokeWidth={1.8} />
           </button>
+        </div>
+        <div className="conversation-heading">
+          <h1>{project.name}</h1>
+        </div>
+        <div className="conversation-header-actions">
           <button className="conversation-icon-btn" onClick={() => setShowInspector(value => !value)} aria-label={showInspector ? '收起右侧面板' : '展开右侧面板'} title={showInspector ? '收起右侧面板' : '展开右侧面板'}>
             <PanelRightClose size={16} strokeWidth={1.8} />
           </button>
@@ -588,59 +673,62 @@ export default function ConversationView({
         </div>
       </header>
 
-      <div className={`conversation-grid${showSessions ? '' : ' no-sessions'}${showInspector ? '' : ' no-inspector'}`}>
-        {showSessions && (
-          <aside className="session-sidebar">
-            <div className="session-sidebar-head">
-              <span>会话</span>
-              <button className="conversation-icon-btn small" onClick={onNewConversation} aria-label="新建会话" title="新建会话">
-                <Plus size={15} strokeWidth={2} />
-              </button>
-            </div>
-            {conversations.filter(item => !item.deletedAt).length === 0 ? (
-              <p className="session-empty">点击右上角「+」新建此项目下的第一条会话。</p>
-            ) : (
-              conversations.filter(item => !item.deletedAt).map(item => (
-                <div className={`session-item-wrap${item.id === activeConversationId ? ' active' : ''}`} key={item.id}>
-                  <button className={`session-item${item.id === activeConversationId ? ' active' : ''}`} onClick={() => onSelectConversation(item.id)}>
-                    <div className="session-item-copy">
-                      <strong>{item.title || '新会话'}</strong>
-                      {item.id === activeConversationId && isGenerating && (
-                        <span className="session-item-run" role="status" aria-label="生成中"><span />生成中</span>
-                      )}
-                    </div>
-                  </button>
-                  <button
-                    className="session-item-more"
-                    onClick={() => setOpenMenuId(value => (value === item.id ? null : item.id))}
-                    aria-label={`会话操作：${item.title || '新会话'}`}
-                    aria-expanded={openMenuId === item.id}
-                    title="会话操作"
-                  >
-                    <MoreHorizontal size={15} strokeWidth={1.9} />
-                  </button>
-                  {openMenuId === item.id && (
-                    <div className="session-menu" role="menu">
-                      <button role="menuitem" onClick={() => { setOpenMenuId(null); setRenamingId(item.id); setRenameDraft(item.title); setRenameError('') }}>
-                        <Pencil size={13} strokeWidth={1.8} /> 重命名
-                      </button>
-                      <button role="menuitem" onClick={() => { setOpenMenuId(null); setDeletingId(item.id) }}>
-                        <Trash2 size={13} strokeWidth={1.8} /> 删除会话
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ))
-            )}
-            <div className="session-sidebar-foot">
-              <button className="session-trash" onClick={() => setShowTrash(true)}>
-                <Trash2 size={14} strokeWidth={1.8} />
-                <span>回收站</span>
-                {archived.length > 0 && <em>{archived.length}</em>}
-              </button>
-            </div>
-          </aside>
-        )}
+      <div className="conversation-grid" ref={gridRef}>
+        <div className="conversation-pane conversation-pane-sessions" inert={!showSessions} ref={sessionsPaneRef} style={showSessions ? sessionsWidthStyle : { width: 0 }}>
+          <div className="conversation-pane-inner" style={sessionsWidthStyle}>
+            <aside className="session-sidebar">
+              <div className="session-sidebar-head">
+                <span>会话</span>
+                <button className="conversation-icon-btn small" onClick={onNewConversation} aria-label="新建会话" title="新建会话">
+                  <Plus size={15} strokeWidth={2} />
+                </button>
+              </div>
+              {conversations.filter(item => !item.deletedAt).length === 0 ? (
+                <p className="session-empty">点击右上角「+」新建此项目下的第一条会话。</p>
+              ) : (
+                conversations.filter(item => !item.deletedAt).map(item => (
+                  <div className={`session-item-wrap${item.id === activeConversationId ? ' active' : ''}`} key={item.id}>
+                    <button className={`session-item${item.id === activeConversationId ? ' active' : ''}`} onClick={() => onSelectConversation(item.id)}>
+                      <div className="session-item-copy">
+                        <strong>{item.title || '新会话'}</strong>
+                        {item.id === activeConversationId && isGenerating && (
+                          <span className="session-item-run" role="status" aria-label="生成中"><span />生成中</span>
+                        )}
+                      </div>
+                    </button>
+                    <button
+                      className="session-item-more"
+                      onClick={() => setOpenMenuId(value => (value === item.id ? null : item.id))}
+                      aria-label={`会话操作：${item.title || '新会话'}`}
+                      aria-expanded={openMenuId === item.id}
+                      title="会话操作"
+                    >
+                      <MoreHorizontal size={15} strokeWidth={1.9} />
+                    </button>
+                    {openMenuId === item.id && (
+                      <div className="session-menu" role="menu">
+                        <button role="menuitem" onClick={() => { setOpenMenuId(null); setRenamingId(item.id); setRenameDraft(item.title); setRenameError('') }}>
+                          <Pencil size={13} strokeWidth={1.8} /> 重命名
+                        </button>
+                        <button role="menuitem" onClick={() => { setOpenMenuId(null); setDeletingId(item.id) }}>
+                          <Trash2 size={13} strokeWidth={1.8} /> 删除会话
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+              <div className="session-sidebar-foot">
+                <button className="session-trash" onClick={() => setShowTrash(true)}>
+                  <Trash2 size={14} strokeWidth={1.8} />
+                  <span>回收站</span>
+                  {archived.length > 0 && <em>{archived.length}</em>}
+                </button>
+              </div>
+            </aside>
+          </div>
+        </div>
+        <ConversationDivider collapsed={!showSessions} label="调整会话列表宽度" onDrag={dragSessions} />
 
         <section className="chat-column">
           <div className="message-viewport">
@@ -654,7 +742,6 @@ export default function ConversationView({
             {messages.map(message => (
               <Fragment key={message.id}>
                 <article className={`message-row ${message.role}`}>
-                  {message.role === 'assistant' && <div className="message-avatar"><Bot size={15} strokeWidth={1.8} /></div>}
                   <div className="message-content">
                     {activeTraces.settled[message.id] && (
                       <ThinkingTrace
@@ -713,89 +800,92 @@ export default function ConversationView({
           </form>
         </section>
 
-        {showInspector && (
-          <aside className="project-inspector">
-            <div className="inspector-tabs">
-              <button className={inspectorTab === 'assets' ? 'active' : ''} onClick={() => setInspectorTab('assets')}>资产</button>
-              <button className={inspectorTab === 'debug' ? 'active' : ''} onClick={() => setInspectorTab('debug')}>调试</button>
-            </div>
-
-            {inspectorTab === 'assets' ? (
-              <div className="inspector-section">
-                <div className="inspector-title">
-                  <span className="inspector-title-label"><Folder size={13} strokeWidth={1.8} />项目案卷</span>
-                </div>
-                <div className="inspector-files">
-                  {caseFiles.map(file => (
-                    <div className="inspector-file" key={file.name}>
-                      <span className="inspector-file-name">{file.name}</span>
-                      <span className="inspector-file-meta">项目材料 · {file.size}</span>
-                      {file.status === '已读取'
-                        ? <CheckCircle2 aria-label={file.status} className="inspector-file-check" role="img" size={15} strokeWidth={2} />
-                        : <Circle aria-label={file.status} className="inspector-file-check pending" role="img" size={15} strokeWidth={2} />}
-                    </div>
-                  ))}
-                </div>
-                <input
-                  accept={CASE_FILE_EXTENSIONS}
-                  className="hidden"
-                  multiple
-                  onChange={event => {
-                    addCaseFiles(event.target.files)
-                    event.target.value = ''
-                  }}
-                  ref={caseFileInputRef}
-                  type="file"
-                />
-                <button className="inspector-add" onClick={() => caseFileInputRef.current?.click()} type="button">
-                  <Plus size={13} strokeWidth={2} />添加项目文件
-                </button>
+        <ConversationDivider collapsed={!showInspector} label="调整右侧面板宽度" onDrag={dragInspector} />
+        <div className="conversation-pane conversation-pane-inspector" inert={!showInspector} ref={inspectorPaneRef} style={showInspector ? inspectorWidthStyle : { width: 0 }}>
+          <div className="conversation-pane-inner" style={inspectorWidthStyle}>
+            <aside className="project-inspector">
+              <div className="inspector-tabs">
+                <button className={inspectorTab === 'assets' ? 'active' : ''} onClick={() => setInspectorTab('assets')}>资产</button>
+                <button className={inspectorTab === 'debug' ? 'active' : ''} onClick={() => setInspectorTab('debug')}>调试</button>
               </div>
-            ) : (
-              <>
+
+              {inspectorTab === 'assets' ? (
                 <div className="inspector-section">
                   <div className="inspector-title">
-                    <span>Project scope</span>
-                    <span className={`inspector-status${isGenerating ? '' : ' idle'}`}><span /> {isGenerating ? 'streaming' : 'ready'}</span>
+                    <span className="inspector-title-label"><Folder size={13} strokeWidth={1.8} />项目案卷</span>
                   </div>
-                  <div className="inspector-context">
-                    <span>resource</span>
-                    <code>project:{project.id}</code>
+                  <div className="inspector-files">
+                    {caseFiles.map(file => (
+                      <div className="inspector-file" key={file.name}>
+                        <span className="inspector-file-name">{file.name}</span>
+                        <span className="inspector-file-meta">项目材料 · {file.size}</span>
+                        {file.status === '已读取'
+                          ? <CheckCircle2 aria-label={file.status} className="inspector-file-check" role="img" size={15} strokeWidth={2} />
+                          : <Circle aria-label={file.status} className="inspector-file-check pending" role="img" size={15} strokeWidth={2} />}
+                      </div>
+                    ))}
                   </div>
-                  <div className="inspector-context">
-                    <span>thread</span>
-                    <code>{activeConversationId ? `project-chat:${activeConversationId}` : '—'}</code>
-                  </div>
+                  <input
+                    accept={CASE_FILE_EXTENSIONS}
+                    className="hidden"
+                    multiple
+                    onChange={event => {
+                      addCaseFiles(event.target.files)
+                      event.target.value = ''
+                    }}
+                    ref={caseFileInputRef}
+                    type="file"
+                  />
+                  <button className="inspector-add" onClick={() => caseFileInputRef.current?.click()} type="button">
+                    <Plus size={13} strokeWidth={2} />添加项目文件
+                  </button>
                 </div>
+              ) : (
+                <>
+                  <div className="inspector-section">
+                    <div className="inspector-title">
+                      <span>Project scope</span>
+                      <span className={`inspector-status${isGenerating ? '' : ' idle'}`}><span /> {isGenerating ? 'streaming' : 'ready'}</span>
+                    </div>
+                    <div className="inspector-context">
+                      <span>resource</span>
+                      <code>project:{project.id}</code>
+                    </div>
+                    <div className="inspector-context">
+                      <span>thread</span>
+                      <code>{activeConversationId ? `project-chat:${activeConversationId}` : '—'}</code>
+                    </div>
+                  </div>
 
-                <div className="inspector-section">
-                  <div className="inspector-title">
-                    <span>Delegation</span>
-                    {isGenerating && <span className="inspector-live">live</span>}
+                  <div className="inspector-section">
+                    <div className="inspector-title">
+                      <span>Delegation</span>
+                      {isGenerating && <span className="inspector-live">live</span>}
+                    </div>
+                    <p className="inspector-empty">本轮还没有子 Agent 委派；主管会在需要时调用成员。</p>
                   </div>
-                  <p className="inspector-empty">本轮还没有子 Agent 委派；主管会在需要时调用成员。</p>
-                </div>
 
-                <div className="inspector-section">
-                  <div className="inspector-title"><span>Sources</span></div>
-                  <p className="inspector-empty">本轮还没有登记来源。</p>
-                </div>
+                  <div className="inspector-section">
+                    <div className="inspector-title"><span>Sources</span></div>
+                    <p className="inspector-empty">本轮还没有登记来源。</p>
+                  </div>
 
-                <div className="inspector-section">
-                  <div className="inspector-title">
-                    <span>项目观察记忆</span>
-                    <span className="inspector-gen">gen 0</span>
+                  <div className="inspector-section">
+                    <div className="inspector-title">
+                      <span>项目观察记忆</span>
+                      <span className="inspector-gen">gen 0</span>
+                    </div>
+                    <div className="inspector-tokens">
+                      <div><span>Messages</span><span className="inspector-bar"><i style={{ width: '0%' }} /></span></div>
+                      <div><span>Observations</span><span className="inspector-bar"><i style={{ width: '0%' }} /></span></div>
+                    </div>
+                    <p className="inspector-empty">还没有观察日志；对话累积到阈值后 Observer 会首次生成。</p>
                   </div>
-                  <div className="inspector-tokens">
-                    <div><span>Messages</span><span className="inspector-bar"><i style={{ width: '0%' }} /></span></div>
-                    <div><span>Observations</span><span className="inspector-bar"><i style={{ width: '0%' }} /></span></div>
-                  </div>
-                  <p className="inspector-empty">还没有观察日志；对话累积到阈值后 Observer 会首次生成。</p>
-                </div>
-              </>
-            )}
-          </aside>
-        )}
+                </>
+              )}
+            </aside>
+          </div>
+        </div>
       </div>
     </div>
 

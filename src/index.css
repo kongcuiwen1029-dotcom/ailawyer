@@ -2589,6 +2589,7 @@ body.wv-resizing { user-select: none; cursor: col-resize; }
   font-size: 13px;
 }
 .conversation-header {
+  position: relative;
   height: 74px;
   flex: none;
   display: flex;
@@ -2599,7 +2600,9 @@ body.wv-resizing { user-select: none; cursor: col-resize; }
   border-bottom: 1px solid var(--conversation-hairline);
 }
 .conversation-header-left, .conversation-header-actions { display: flex; align-items: center; gap: 12px; min-width: 0; }
-.conversation-heading { min-width: 0; }
+/* 标题从左侧组里出来、绝对居中（真实应用就是这条 absolute 居中的写法）。两侧
+   按钮组各占一端，标题最多占一半宽，再长就截断。 */
+.conversation-heading { position: absolute; top: 50%; left: 50%; max-width: 50%; min-width: 0; transform: translate(-50%, -50%); }
 .conversation-heading h1 { margin: 0; font-size: 16px; line-height: 1.25; font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .conversation-icon-btn {
   width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;
@@ -2608,11 +2611,27 @@ body.wv-resizing { user-select: none; cursor: col-resize; }
 }
 .conversation-icon-btn.small { width: 27px; height: 27px; border-radius: 8px; }
 .conversation-icon-btn:hover { color: var(--conversation-text); background: var(--conversation-control-hover); border-color: var(--conversation-border-strong); }
-.conversation-grid { min-height: 0; flex: 1; display: grid; grid-template-columns: 224px minmax(0, 1fr) 270px; gap: 1px; background: var(--conversation-hairline); }
-.conversation-grid.no-sessions { grid-template-columns: minmax(0, 1fr) 270px; }
-.conversation-grid.no-inspector { grid-template-columns: 224px minmax(0, 1fr); }
-.conversation-grid.no-sessions.no-inspector { grid-template-columns: minmax(0, 1fr); }
-.session-sidebar, .chat-column, .project-inspector { min-width: 0; min-height: 0; background: var(--conversation-surface); }
+/* 三栏从静态 grid 换成 flex：两侧可拖、可收起，分界条自己占 12px（真实应用里
+   w-3 那条）。grid 自己的背景还留着——它铺满整块，在 12px 的缝里显形（灰色主题
+   下面有一层 scrim 覆盖）。收起走宽度过渡，面板内层钉住原宽，外层裁掉超出的部分，
+   所以收起来是「滑出去」而不是「被压扁」；overflow-x 用 clip 是为了不裁掉会话行
+   的浮层菜单（它要探出面板顶在别的栏上）。 */
+.conversation-grid { min-height: 0; flex: 1; display: flex; align-items: stretch; background: var(--conversation-hairline); }
+.conversation-pane { display: flex; flex: none; min-width: 0; overflow-x: clip; transition: width 180ms ease; }
+.conversation-pane-inspector { justify-content: flex-end; }
+.conversation-pane-inner { height: 100%; display: flex; flex: none; }
+.conversation-pane-inner > * { flex: 1; min-width: 0; }
+.conversation-pane-sessions .conversation-pane-inner { width: 272px; }
+.conversation-pane-inspector .conversation-pane-inner { width: 352px; }
+.conversation-divider { position: relative; flex: none; width: 12px; cursor: col-resize; touch-action: none; transition: width 180ms ease; }
+.conversation-divider::after { content: ''; position: absolute; top: 0; bottom: 0; left: 50%; width: 4px; transform: translateX(-50%); border-radius: 999px; background: transparent; transition: background 140ms ease; }
+/* 线色用 border-strong：缝底本身就是 hairline 色（还叠着灰主题的 scrim），
+   同色画上去等于没画；border-strong 在两套主题里都比它亮一档。 */
+.conversation-divider:hover::after, .conversation-divider.dragging::after { background: var(--conversation-border-strong); }
+body.conversation-resizing { user-select: none; cursor: col-resize; }
+body.conversation-resizing .conversation-pane { transition: none; }
+.session-sidebar, .chat-column, .project-inspector { min-width: 0; min-height: 0; background: var(--conversation-surface); border-radius: 16px; }
+.chat-column { flex: 1 1 0; }
 .session-sidebar { display: flex; flex-direction: column; padding: 18px 12px 14px; }
 .session-sidebar-head, .inspector-title { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .session-sidebar-head { padding: 0 6px 12px; color: var(--conversation-text); font-weight: 650; }
@@ -2639,20 +2658,21 @@ body.wv-resizing { user-select: none; cursor: col-resize; }
 .session-trash:hover { color: var(--conversation-text); background: var(--conversation-control-hover); }
 .session-trash em { margin-left: auto; padding: 1px 6px; border-radius: 999px; color: var(--conversation-muted-strong); background: var(--conversation-control); font-size: 10px; font-style: normal; }
 .chat-column { display: flex; flex-direction: column; overflow: hidden; }
-.message-viewport { min-height: 0; flex: 1; overflow-y: auto; padding: 26px clamp(18px, 5vw, 74px) 30px; scrollbar-width: thin; scrollbar-color: var(--conversation-hairline) transparent; }
+/* 左右内缩必须与 .conversation-composer 的 `calc(100% - 36px)` 相等（每边 18px）：
+   两个列的参照系不同（这里是 viewport 的 content box，composer 是 chat-column 全宽），
+   只有内缩一致，消息列与输入框才在任意窗口宽度下同左缘。宽屏看不出差别 —— 760 上限
+   居中与内缩无关；col 收窄到 796px 以下才会分叉（原来的 74px 就是这么漏掉的）。 */
+.message-viewport { min-height: 0; flex: 1; overflow-y: auto; padding: 26px 18px 30px; scrollbar-width: thin; scrollbar-color: var(--conversation-hairline) transparent; }
 .message-viewport::-webkit-scrollbar { width: 7px; }
 .message-viewport::-webkit-scrollbar-thumb { border-radius: 5px; background: var(--conversation-hairline); }
 .conversation-empty { max-width: 440px; margin: 13vh auto 0; text-align: center; color: var(--conversation-muted); }
 .conversation-empty-mark { width: 46px; height: 46px; display: flex; align-items: center; justify-content: center; margin: 0 auto 13px; border-radius: 15px; color: var(--conversation-accent); background: var(--conversation-accent-soft); }
 .conversation-empty h2 { margin: 0 0 8px; color: var(--conversation-text); font-size: 18px; font-weight: 650; }
 .conversation-empty p { margin: 0; font-size: 12.5px; line-height: 1.65; }
-.message-row { display: flex; gap: 10px; width: min(760px, 100%); margin: 0 auto 24px; }
+.message-row { display: flex; width: min(760px, 100%); margin: 0 auto 24px; }
 .message-row.user { justify-content: flex-end; }
 .message-row.user .message-content { align-items: flex-end; max-width: min(610px, 88%); }
 .message-row.assistant .message-content { min-width: 0; max-width: min(700px, 94%); }
-/* The avatar lines up with the bubble's first line now that the name/timestamp
-   row above it is gone. */
-.message-avatar { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; flex: none; border-radius: 9px; color: var(--conversation-accent); background: var(--conversation-accent-soft); }
 .message-content { display: flex; flex-direction: column; min-width: 0; }
 .message-bubble { padding: 11px 14px; border: 1px solid var(--conversation-border); border-radius: 4px 14px 14px 14px; color: var(--conversation-text); background: var(--conversation-assistant); font-size: 13px; line-height: 1.72; white-space: pre-wrap; }
 .message-row.user .message-bubble { border-color: transparent; border-radius: 14px 4px 14px 14px; color: var(--conversation-user-text); background: var(--conversation-user); }
@@ -3172,16 +3192,19 @@ body.wv-resizing { user-select: none; cursor: col-resize; }
 .conversation-theme.gray .inspector-memory { border-left-color: var(--conversation-hairline); }
 
 @media (max-width: 1120px) {
-  .conversation-grid { grid-template-columns: 196px minmax(0, 1fr) 228px; }
-  .conversation-grid.no-inspector { grid-template-columns: 196px minmax(0, 1fr); }
+  /* 没拖过的宽度仍跟断点走：窄一档的窗口让两侧收窄、中栏保住宽。拖动之后宽度
+     就是用户定的像素值，不再随断点变。 */
+  .conversation-pane-sessions .conversation-pane-inner { width: 196px; }
+  .conversation-pane-inspector .conversation-pane-inner { width: 228px; }
   .project-inspector { padding-left: 12px; padding-right: 12px; }
 }
 @media (max-width: 860px) {
   .conversation-theme { padding: 0; }.conversation-view { border-radius: 0; }.conversation-header { height: 64px; padding: 0 14px; }
   /* The sidebar and the inspector are both gone at this width, so their two
-     toggles would be buttons that do nothing. 项目设置 (the third one) stays. */
-  .conversation-header-actions .conversation-icon-btn:nth-child(-n+2) { display: none; }
-  .conversation-grid, .conversation-grid.no-inspector { grid-template-columns: minmax(0, 1fr); }.session-sidebar, .project-inspector { display: none; }
+     toggles would be buttons that do nothing. 返回 and 项目设置 stay. */
+  .conversation-header-left .conversation-icon-btn:last-child { display: none; }
+  .conversation-header-actions .conversation-icon-btn:first-child { display: none; }
+  .conversation-pane, .conversation-divider { display: none; }
   .message-viewport { padding-left: 14px; padding-right: 14px; }.conversation-composer { width: calc(100% - 20px); margin-bottom: 10px; }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -3192,4 +3215,6 @@ body.wv-resizing { user-select: none; cursor: col-resize; }
      否则 reduced-motion 下三枚一起戴上紫环，比动效还吵。 */
   .trace.live .trace-agent-avatar:not(.active)::after { content: none; }
   .trace-body, .trace-caret, .trace-stream-body, .trace-stream-caret, .trace-agent-caret, .trace-details-toggle svg, .trace-step-title { transition: none; }
+  /* 面板收展也是「推动布局的」，跟着一起关。 */
+  .conversation-pane, .conversation-divider, .conversation-divider::after { transition: none; }
 }
