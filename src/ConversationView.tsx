@@ -237,12 +237,12 @@ function ThinkingTrace({ live, stopped, startedAt, endedAt }: { live: boolean; s
     <section className={`trace${live ? ' live' : ''}`} data-slot="thinking-trace" aria-label="AI 思考过程" aria-live="polite">
       <button type="button" className="trace-head" onClick={() => setManualOpen(value => !(value ?? live))} aria-expanded={open}>
         {/* 左端的小脸：照 Thinking.json 那张 Lottie 表情重画 —— 4 秒一条时间轴上的三次眨眼、
-            一转眼珠（眉跟着挑、嘴跟着跑），四条动效由 .trace-face 系列驱动 */}
-        <svg className="trace-face" width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            一转眼珠（眉跟着挑、嘴跟着跑）、食指的点动，五条动效由 .trace-face 系列驱动 */}
+        <svg className="trace-face" width={28} height={28} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <circle className="trace-face-disc" cx="12" cy="12" r="9.3" stroke="none" />
           {/* 五官装在同一个组里：那份 Lottie 里它们的父层就是眼睛，眼珠一动整张脸跟着偏 */}
           <g className="trace-face-shift">
-            {/* 眼是实心椭圆（不是描边竖线）：24px 下 rx 1.16 约 2.3px 宽，是这份尺寸还读得出来的形状 */}
+            {/* 眼是实心椭圆（不是描边竖线）：28px 下 rx 1.16 约 2.7px 宽，是这份尺寸还读得出来的形状 */}
             <ellipse className="trace-face-eye" cx="9.33" cy="8.8" rx="1.16" ry="1.45" fill="currentColor" stroke="none" />
             <ellipse className="trace-face-eye" cx="15.49" cy="9.38" rx="1.16" ry="1.45" fill="currentColor" stroke="none" />
             {/* 眉与嘴的描边在 Lottie 里是 30.19 世界单位 ≈ 0.93 此处单位，取 1 补一点栅格损失 */}
@@ -250,6 +250,10 @@ function ThinkingTrace({ live, stopped, startedAt, endedAt }: { live: boolean; s
             <path className="trace-face-brow-r" d="M13.63 8.17C13.63 8.17 15.6 7.3 17.8 8.43" strokeWidth={1} />
             <path d="M10.39 13.7C10.39 13.7 12.57 13.21 14.43 14.78" strokeWidth={1} />
           </g>
+          {/* 左下角那只橙色的手（Mano 层）：它是那份 Lottie 里唯一没有父层的图层，所以不在
+              shift 组里 —— 眼珠转的时候它不跟着偏。形状与位移照文件原样（局部坐标 + 图层
+              变换），d 上这份是食指伸出的那一半，另一半与缓动在 CSS 的 trace-face-hand-point 里 */}
+          <path className="trace-face-hand" fill="#f4900c" stroke="none" d="M36.35,151.64C36.35,151.64 60.22,143.88 63.31,126.13C66.58,107.81 51.54,104.11 51.54,104.11C51.54,104.11 71.18,100.18 73.65,78.14C75.97,57.39 57.39,52.43 57.39,52.43C57.39,52.43 75.69,44.88 76.56,23.39C77.28,5.29 57.78,-3.56 57.78,-3.56C57.78,-3.56 152.84,-26.58 162.6,-28.84C172.33,-31.12 187.52,-40.46 182.79,-60.82C178.09,-81.2 160.07,-81.92 150.75,-79.75C141.43,-77.56 23.5,-50.18 -17.18,-40.71C-21.52,-39.71 -41.86,-35.01 -44.33,-34.41C-54.52,-32.01 -59.14,-36.5 -51.97,-44.07C-42.37,-54.18 -36.25,-65.37 -34.1,-83.94C-31.86,-103.48 -38.48,-127.6 -42.27,-136.94C-49.33,-154.32 -61.24,-168.05 -74.99,-172.77C-96.47,-180.13 -111.71,-166.71 -104.09,-143.31C-92.69,-108.31 -100.14,-79.63 -119.81,-62.31C-166.01,-21.61 -187.52,7.41 -173.2,69.26C-157.6,136.71 -90.62,180.13 -23.16,164.5C-19.6,163.71 36.35,151.64 36.35,151.64Z" />
         </svg>
         <span className="trace-title">
           {live ? `正在${thinkingSteps[activeStep].title}` : `已思考 ${Math.round(elapsedSeconds)} 秒`}
