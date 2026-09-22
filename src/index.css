@@ -300,7 +300,12 @@ body::after {
     linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.01));
 }
 
-/* Nav items */
+/* Nav items — the height is viewport-adaptive since 2026-09-22 (user:
+   "高度做自适应"). The item keeps its content-driven 48.5px as the floor and
+   grows with the viewport height, capped at 72px so a tall window fattens the
+   menu moderately instead of stretching it into slabs. Below a ~750px
+   viewport the clamp floor sits under the content height, so short windows
+   render exactly as they did before. */
 .dk-nav-item {
   display: flex;
   align-items: center;
@@ -316,6 +321,7 @@ body::after {
   border: 1px solid transparent;
   width: 100%;
   text-align: left;
+  min-height: clamp(48px, 6.4vh, 72px);
 }
 
 .dk-nav-item:hover {
@@ -958,8 +964,9 @@ body::after {
 }
 
 /* Nav item — dark's geometry throughout: gap 12, padding 12/14, radius 16,
-   15px at 550. The active item no longer gains weight, because dark's does not;
-   the lit fill alone carries the state in both themes. */
+   15px at 550, and the same viewport-adaptive min-height. The active item no
+   longer gains weight, because dark's does not; the lit fill alone carries the
+   state in both themes. */
 .gy-nav-item {
   display: flex;
   align-items: center;
@@ -974,6 +981,7 @@ body::after {
   background: transparent;
   width: 100%;
   text-align: left;
+  min-height: clamp(48px, 6.4vh, 72px);
   transition: background 140ms ease, color 140ms ease, border-color 140ms ease, box-shadow 140ms ease, backdrop-filter 180ms ease;
 }
 
@@ -1409,9 +1417,13 @@ body::after {
 .wv-scroll:hover { scrollbar-color: rgba(120,110,150,0.32) transparent; }
 .wv-scroll:hover::-webkit-scrollbar-thumb { background: rgba(120,110,150,0.3); }
 
+/* 内容区宽度跟随浏览器（2026-09-22 用户「做浏览器自适应宽度」）。原先这里锁着
+   max-width: 1040px 再加 margin auto 居中，窗口一宽内容就不再跟着变、两侧留白
+   一路涨（1581px 窗口下实测两侧各 110.5px），所以两条一起去掉，交回块级默认的
+   填满主列，只留 46/48/72 的内边距。窄窗口本来就由同一条「宽度自己缩」的规则
+   兜着，不需要新断点；子级都已经能伸——卡片网格 auto-fill 会自动加列，工作台
+   中栏 flex:1，表格页自带横向滚动。 */
 .wv {
-  max-width: 1040px;
-  margin: 0 auto;
   padding: 46px 48px 72px;
 }
 
@@ -1535,6 +1547,10 @@ body::after {
 .wv-row-main { min-width: 0; flex: 1; }
 .wv-row-title { margin: 0; font-size: 14.5px; font-weight: 600; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .wv-row-sub { margin: 4px 0 0; font-size: 12.5px; }
+/* 资源市场列表行的时间（2026-09-22 用户「去掉，更新时间放在上面的「已发布」状态
+   后面」）：原 .wv-row-sub 里的 {resource.updated} 挪进 .wv-row-title，字重还原成
+   次级信息的读法；颜色在两个主题块里与 .wv-row-sub 同一组。 */
+.wv-row-time { font-size: 12.5px; font-weight: 400; }
 .wv-row-actions { display: flex; align-items: center; gap: 8px; flex: none; }
 
 .wv-chips { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -1652,7 +1668,7 @@ body::after {
 /* ── Dark theme scope ── */
 .dk-main .wv-h1 { color: rgba(255,255,255,0.95); }
 .dk-main .wv-hint,
-.dk-main .wv-card-desc, .dk-main .wv-card-meta, .dk-main .wv-row-sub { color: rgba(255,255,255,0.56); }
+.dk-main .wv-card-desc, .dk-main .wv-card-meta, .dk-main .wv-row-sub, .dk-main .wv-row-time { color: rgba(255,255,255,0.56); }
 .dk-main .wv-card, .dk-main .wv-row {
   border: 1px solid rgba(255,255,255,0.14);
   background:
@@ -1727,7 +1743,7 @@ body::after {
 /* ── Gray theme scope ── */
 .gy-main .wv-h1 { color: var(--gy-text); }
 .gy-main .wv-hint,
-.gy-main .wv-card-desc, .gy-main .wv-card-meta, .gy-main .wv-row-sub { color: var(--gy-text-2); }
+.gy-main .wv-card-desc, .gy-main .wv-card-meta, .gy-main .wv-row-sub, .gy-main .wv-row-time { color: var(--gy-text-2); }
 .gy-main .wv-card, .gy-main .wv-row {
   background: var(--gy-surface);
   border: 1px solid var(--gy-border);
@@ -1774,9 +1790,13 @@ body::after {
 .gy-main .wv-badge.warn { background: #fbf0e2; color: #b3702f; }
 .gy-main .wv-chip2 { background: var(--gy-surface-2); color: var(--gy-text-2); border: 1px solid var(--gy-border-soft); }
 .gy-main .wv-user-avatar { background: var(--gy-surface-2); }
-.gy-main .wv-seg { background: var(--gy-surface-2); border: 1px solid var(--gy-border); }
+/* Same picture as the conversation page's .inspector-tabs (2026-09-22, "这个也
+   改一下"): the track drops to a sunken grey so the opaque white pill reads as a
+   raised card. Track value matches that rule (#ececec); the shadow was already
+   in place. */
+.gy-main .wv-seg { background: #ececec; border: 1px solid var(--gy-border); }
 .gy-main .wv-seg button { color: var(--gy-text-2); }
-.gy-main .wv-seg button.active { background: var(--gy-surface); color: var(--gy-text); box-shadow: var(--gy-shadow-sm); }
+.gy-main .wv-seg button.active { background: #fff; color: var(--gy-text); box-shadow: var(--gy-shadow-sm); }
 .gy-main .wv-table th { color: var(--gy-text-3); border-bottom: 1px solid var(--gy-hairline); }
 .gy-main .wv-table td { border-bottom: 1px solid var(--gy-hairline); color: var(--gy-text); }
 .gy-main .wv-table-wrap:hover { scrollbar-color: rgba(88,88,88,0.34) transparent; }
@@ -1862,11 +1882,22 @@ body::after {
 
 /* Detail shell */
 .wv-detail { display: flex; flex-direction: column; }
-.wv-detail-head { display: flex; flex-direction: column; gap: 10px; padding-bottom: 22px; border-bottom: 1px solid rgba(150,140,180,0.18); }
+/* 头部与内容之间原本有一条 1px 分隔线（padding-bottom 22px + border-bottom）。
+   2026-09-22 用户要求「去掉顶部这根线，并整体上移，深浅版同步修改」：线与它
+   让出的 22px 一起删，head 与内容的间距交回 body 的 padding-top 6px 与各内容
+   自身的 margin（工作台 18 / note 14 / banner 18 / tabs 26 / section 30），
+   三种详情页整体上移 23px。两个主题的 border-bottom-color 覆盖随之成了死
+   规则，一并删除。 */
+.wv-detail-head { display: flex; flex-direction: column; gap: 10px; }
 .wv-detail-title { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .wv-detail-title h2 { margin: 0; font-size: 23px; font-weight: 600; letter-spacing: -0.03em; }
 .wv-detail-badges { display: inline-flex; gap: 8px; flex-wrap: wrap; }
 .wv-detail-sub { margin: 0; font-size: 12.5px; line-height: 1.55; }
+/* 资源详情页头部的时间（2026-09-22 用户「去掉，更新时间放在「已发布」后面」）：
+   原 .wv-detail-sub 里的 {resource.updated} 挪进 .wv-detail-badges；align-self 防止
+   它被 inline-flex 的默认 stretch 拉高、文字贴着顶；颜色在两个主题块里与
+   .wv-detail-sub 同一组。 */
+.wv-detail-time { font-size: 12.5px; font-weight: 400; align-self: center; }
 .wv-detail-body { display: flex; flex-direction: column; padding-top: 6px; }
 
 /* 知识库详情的三栏工作区（2026-09-17 对齐真实应用的知识库详情页）。骨架只在这里写
@@ -2245,7 +2276,7 @@ body.wv-resizing { user-select: none; cursor: col-resize; }
 .dk-main .wv-field-label { color: rgba(255,255,255,0.9); }
 .dk-main .wv-field-hint, .dk-main .wv-counter, .dk-main .wv-filter-note, .dk-main .wv-empty,
 .dk-main .wv-pager-count, .dk-main .wv-note, .dk-main .wv-row-desc, .dk-main .wv-tree-size,
-.dk-main .wv-detail-sub, .dk-main .wv-user-email {
+.dk-main .wv-detail-sub, .dk-main .wv-detail-time, .dk-main .wv-user-email {
   color: rgba(255,255,255,0.56);
 }
 .dk-main .wv-counter.over { color: #f08a7a; }
@@ -2278,7 +2309,6 @@ body.wv-resizing { user-select: none; cursor: col-resize; }
 .dk-main .wv-detail-title h2 { color: rgba(255,255,255,0.95); }
 .dk-main .wv-section-head h3 { color: rgba(255,255,255,0.92); }
 .dk-main .wv-flow-index { background: rgba(120,130,237,0.22); color: #b9c0f5; }
-.dk-main .wv-detail-head { border-bottom-color: rgba(255,255,255,0.12); }
 .dk-main .wv-crumbs button { color: rgba(255,255,255,0.56); }
 .dk-main .wv-crumbs button:hover { color: rgba(255,255,255,0.94); }
 .dk-main .wv-crumb-here { color: rgba(255,255,255,0.95); }
@@ -2369,7 +2399,7 @@ body.wv-resizing { user-select: none; cursor: col-resize; }
 .gy-main .wv-field-label { color: var(--gy-text); }
 .gy-main .wv-field-hint, .gy-main .wv-counter, .gy-main .wv-filter-note, .gy-main .wv-empty,
 .gy-main .wv-pager-count, .gy-main .wv-note, .gy-main .wv-row-desc, .gy-main .wv-tree-size,
-.gy-main .wv-detail-sub, .gy-main .wv-user-email {
+.gy-main .wv-detail-sub, .gy-main .wv-detail-time, .gy-main .wv-user-email {
   color: var(--gy-text-2);
 }
 .gy-main .wv-counter.over { color: #c0483d; }
@@ -2404,7 +2434,6 @@ body.wv-resizing { user-select: none; cursor: col-resize; }
 .gy-main .wv-banner.info { background: var(--gy-surface-2); border-color: var(--gy-border); color: var(--gy-text-2); }
 .gy-main .wv-bullets code { color: var(--gy-accent); }
 .gy-main .wv-flow-index { background: var(--gy-surface-2); color: var(--gy-accent); border: 1px solid var(--gy-border-soft); }
-.gy-main .wv-detail-head { border-bottom-color: var(--gy-hairline); }
 .gy-main .wv-crumbs button { color: var(--gy-text-2); }
 .gy-main .wv-crumbs button:hover { color: var(--gy-text); }
 .gy-main .wv-crumb-here { color: var(--gy-text); }
@@ -2658,14 +2687,15 @@ body.conversation-resizing .conversation-pane { transition: none; }
    来是「上死白、下发灰」的 12 阶纵向渐变；column 的白罩曲线（顶 46% → 45%
    处 34% → 底 68%）与背景反向，纵向跨度压到 2.5 阶、下半提白 9 阶，顶部留一
    丝纹理。inspector 不定义、落到 --conversation-card（纯白玻璃，view 旧配方
-   原值）。rim 复用 --conversation-border（两主题同 token），阴影 / blur 也各
+   原值）。rim 默认复用 --conversation-border，灰主题另有专属 --conversation-
+   card-border（#fff，2026-09-22 用户「边框颜色为纯白色」）；阴影 / blur 也各
    有 token（深色轻投影、灰色 blur 18px）。 */
 .session-sidebar, .chat-column, .project-inspector {
   min-width: 0;
   min-height: 0;
   border-radius: 16px;
   background: var(--conversation-card);
-  border: 1px solid var(--conversation-border);
+  border: 1px solid var(--conversation-card-border, var(--conversation-border));
   box-shadow: var(--conversation-card-shadow);
   backdrop-filter: var(--conversation-card-blur);
 }
@@ -2721,9 +2751,10 @@ body.conversation-resizing .conversation-pane { transition: none; }
  * 谁在做（数字员工）、做到哪了（思考的流式输出）、碰过哪些材料（材料明细）。
  * 它不是浮起来的表面：没有阴影、没有扫光。
  *
- * 展开后 620px。这是有意突破 spec/31 铁律 5（一个部件一条窄栏 384px）的一处：
- * 员工要横排成一行、材料明细要左右两栏，384px 里两个都装不下。取舍与理由记在
- * spec/31 的 06-落地映射里。
+ * 展开后 700px —— 与正文气泡同宽、右缘对齐（2026-09-22 用户要求「宽度保持一致并且
+ * 右对齐」，此前为 620px）。这仍是有意突破 spec/31 铁律 5（一个部件一条窄栏 384px）
+ * 的一处：员工要横排成一行、材料明细要左右两栏，384px 里两个都装不下。取舍与理由
+ * 记在 spec/31 的 06-落地映射里。
  *
  * 步骤行间那截 1px 竖线是装订线，走 --conversation-hairline：它和页面上其他所有的线
  * 同一个重量。线画在每一行的 ::before 上而不是容器上，两端各自锚死在相邻两枚标记的
@@ -2734,8 +2765,8 @@ body.conversation-resizing .conversation-pane { transition: none; }
  * ------------------------------------------------------------------------- */
 /* 宽度写成定值而不是百分比：.message-content 的宽度由内容决定，百分比在这类收缩盒子里
    会在算内在尺寸时被当成 auto —— 结果是「轨迹单独一行」比「轨迹挂在气泡上方」窄一截，
-   同一个部件的 chevron 落在两个位置上。给了定值，少内容的那一行也照样撑到 620。 */
-.trace { width: 620px; max-width: 100%; color: var(--conversation-muted); animation: trace-in 320ms cubic-bezier(.23, 1, .32, 1) both; }
+   同一个部件的 chevron 落在两个位置上。给了定值，少内容的那一行也照样撑到 700。 */
+.trace { width: 700px; max-width: 100%; color: var(--conversation-muted); animation: trace-in 320ms cubic-bezier(.23, 1, .32, 1) both; }
 /* 轨迹下面接的是正文气泡，两者之间留一口气：它们是同一段回复的两部分，不是两条消息 */
 .trace + .message-bubble { margin-top: 8px; }
 
@@ -3025,10 +3056,19 @@ body.conversation-resizing .conversation-pane { transition: none; }
 .inspector-tokens > div > span:first-child { flex: none; width: 74px; }
 .inspector-bar { flex: 1; height: 5px; border-radius: 999px; background: var(--conversation-control); overflow: hidden; }
 .inspector-bar i { display: block; height: 100%; border-radius: 999px; background: var(--conversation-accent); }
-.inspector-tabs { display: inline-flex; gap: 3px; margin-bottom: 15px; padding: 3px; border: 1px solid var(--conversation-border); border-radius: 10px; background: var(--conversation-control); }
-.inspector-tabs button { border: 0; border-radius: 7px; padding: 6px 14px; color: var(--conversation-muted); background: transparent; cursor: pointer; font: inherit; font-size: 11px; font-weight: 600; }
+/* 几何与字重对齐项目页的 .wv-seg（卡片/表格切换器）—— 两者是同一视觉语言。 */
+.inspector-tabs { display: inline-flex; gap: 2px; margin-bottom: 15px; padding: 3px; border: 1px solid var(--conversation-border); border-radius: 12px; background: var(--conversation-control); }
+.inspector-tabs button { border: 0; border-radius: 9px; padding: 7px 13px; color: var(--conversation-muted); background: transparent; cursor: pointer; font: inherit; font-size: 13px; font-weight: 550; transition: 140ms ease; }
 .inspector-tabs button:hover { color: var(--conversation-text); }
 .inspector-tabs button.active { color: var(--conversation-text); background: var(--conversation-selected); box-shadow: 0 1px 3px var(--conversation-shadow); }
+/* 灰主题：轨道换成浅灰凹槽、选中项换成**不透明白卡**——2026-09-22 用户给了一张
+   分段控件参考图（浅灰容器 + 实白选中卡 + 轻投影 + 彩色标题）说「按照这种样式
+   修改试试」。与上一条被撤销的灰轨道方案的关系：凹槽照旧，药丸从白玻璃渐变换成
+   实白，白卡坐在灰底上轮廓自明（「白玻璃叠白玻璃」治不好的就是这件事）。标题色
+   不另给、由基础规则走 --conversation-text（2026-09-22 用户看过彩色标题后要求
+   「改成黑色」——即本主题正文的黑）。深色不动：暗卡上微亮轨道本就分得清。 */
+.conversation-theme.gray .inspector-tabs { background: #ececec; }
+.conversation-theme.gray .inspector-tabs button.active { background: #fff; box-shadow: var(--gy-shadow-sm); }
 .inspector-memory { padding: 7px 9px; margin-bottom: 7px; border-left: 2px solid var(--conversation-accent-soft); color: var(--conversation-muted-strong); font-size: 10px; line-height: 1.6; }
 
 /* ── Session and project dialogs ──
@@ -3176,7 +3216,7 @@ body.conversation-resizing .conversation-pane { transition: none; }
 
 /* The coloured status tokens (success/danger and their -soft partners) are left
    alone — they are meaning, not material. */
-.conversation-theme.gray { --conversation-text: #25252c; --conversation-muted: #8a8992; --conversation-muted-strong: #5f5e68; --conversation-accent: #5b52c4; --conversation-accent-soft: rgba(255,255,255,.48); --conversation-success: #318759; --conversation-success-soft: #e8f4ed; --conversation-danger: #ae5e5e; --conversation-danger-soft: #f9ecec; --conversation-border: rgba(255,255,255,.86); --conversation-hairline: #e6e6e6; --conversation-border-strong: rgba(255,255,255,.95); --conversation-surface: rgba(255,255,255,.72); --conversation-card: linear-gradient(180deg,rgba(255,255,255,.5),rgba(255,255,255,0) 30%), linear-gradient(180deg,rgba(255,255,255,.26),rgba(255,255,255,.08)); --conversation-card-sidebar: linear-gradient(180deg,rgba(0,0,0,.012),rgba(0,0,0,.024) 50%,rgba(0,0,0,.04)), var(--conversation-card); --conversation-card-column: linear-gradient(180deg,rgba(255,255,255,.46),rgba(255,255,255,.34) 45%,rgba(255,255,255,.68)); --conversation-card-shadow: inset 0 1px 0 rgba(255,255,255,.92), inset 0 -1px 0 rgba(255,255,255,.4), 0 20px 44px rgba(38,38,38,.11), 0 2px 6px rgba(38,38,38,.05); --conversation-card-blur: blur(18px) saturate(180%); --conversation-selected: linear-gradient(180deg,rgba(255,255,255,.62),rgba(255,255,255,0) 56%), linear-gradient(135deg,rgba(255,255,255,.5),rgba(255,255,255,.16)), linear-gradient(180deg,rgba(214,214,214,.5),rgba(214,214,214,.22)); --conversation-control: rgba(255,255,255,.48); --conversation-control-hover: rgba(255,255,255,.8); --conversation-assistant: rgba(255,255,255,.72); --conversation-user: #1c1c1c; --conversation-user-text: #fff; --conversation-source: rgba(255,255,255,.62); --conversation-composer: rgba(255,255,255,.82); --conversation-send: var(--gy-send); --conversation-send-text: #fff; --conversation-shadow: rgba(72,72,72,.12); background: #f1f1f1; /* Raised above the shell's decorative blobs, which are `position: fixed; z-index: 0` on body::before/::after. ::after is body's LAST child in paint order, so at equal z-index it paints on top of #root, and its lavender radial-gradient (rgba(210,185,239,.34), 520px, blur 110px, top-right) was tinting this screen's top-right corner to rgb(238,235,241) — a pale periwinkle that reaches the screen but is painted by an element outside this theme's reach. Measured, not assumed: hiding body::before/::after made those pixels chroma 0, and this rule reproduced it (83.6% -> 96.8% of the view exactly neutral). ::before is body's FIRST child so it paints underneath and never showed; the welcome screen's .gy-page already carries z-index: 1 and was never affected. Scoped to .gray because in light and dark those blobs are the intended decoration. .theme-toggle is z-index: 100, so it stays above this. */ position: relative; z-index: 1; color: var(--conversation-text); }
+.conversation-theme.gray { --conversation-text: #25252c; --conversation-muted: #8a8992; --conversation-muted-strong: #5f5e68; --conversation-accent: #5b52c4; --conversation-accent-soft: rgba(255,255,255,.48); --conversation-success: #318759; --conversation-success-soft: #e8f4ed; --conversation-danger: #ae5e5e; --conversation-danger-soft: #f9ecec; --conversation-border: rgba(255,255,255,.86); --conversation-hairline: #e6e6e6; --conversation-border-strong: rgba(255,255,255,.95); --conversation-surface: rgba(255,255,255,.72); --conversation-card: linear-gradient(180deg,rgba(255,255,255,.5),rgba(255,255,255,0) 30%), linear-gradient(180deg,rgba(255,255,255,.26),rgba(255,255,255,.08)); --conversation-card-sidebar: linear-gradient(180deg,rgba(0,0,0,.012),rgba(0,0,0,.024) 50%,rgba(0,0,0,.04)), var(--conversation-card); --conversation-card-column: linear-gradient(180deg,rgba(255,255,255,.46),rgba(255,255,255,.34) 45%,rgba(255,255,255,.68)); --conversation-card-border: #fff; --conversation-card-shadow: inset 0 1px 0 rgba(255,255,255,.92), inset 0 -1px 0 rgba(255,255,255,.4), 0 20px 44px rgba(38,38,38,.11), 0 2px 6px rgba(38,38,38,.05); --conversation-card-blur: blur(18px) saturate(180%); --conversation-selected: linear-gradient(180deg,rgba(255,255,255,.62),rgba(255,255,255,0) 56%), linear-gradient(135deg,rgba(255,255,255,.5),rgba(255,255,255,.16)), linear-gradient(180deg,rgba(214,214,214,.5),rgba(214,214,214,.22)); --conversation-control: rgba(255,255,255,.48); --conversation-control-hover: rgba(255,255,255,.8); --conversation-assistant: rgba(255,255,255,.72); --conversation-user: #1c1c1c; --conversation-user-text: #fff; --conversation-source: rgba(255,255,255,.62); --conversation-composer: rgba(255,255,255,.82); --conversation-send: var(--gy-send); --conversation-send-text: #fff; --conversation-shadow: rgba(72,72,72,.12); background: #f1f1f1; /* Raised above the shell's decorative blobs, which are `position: fixed; z-index: 0` on body::before/::after. ::after is body's LAST child in paint order, so at equal z-index it paints on top of #root, and its lavender radial-gradient (rgba(210,185,239,.34), 520px, blur 110px, top-right) was tinting this screen's top-right corner to rgb(238,235,241) — a pale periwinkle that reaches the screen but is painted by an element outside this theme's reach. Measured, not assumed: hiding body::before/::after made those pixels chroma 0, and this rule reproduced it (83.6% -> 96.8% of the view exactly neutral). ::before is body's FIRST child so it paints underneath and never showed; the welcome screen's .gy-page already carries z-index: 1 and was never affected. Scoped to .gray because in light and dark those blobs are the intended decoration. .theme-toggle is z-index: 100, so it stays above this. */ position: relative; z-index: 1; color: var(--conversation-text); }
 /* Cards that sit ON the pane. They need the home page's elevation for the same
    reason the home page's cards do, only more so: a rim does not draw itself, and
    here the fill is a 0.72 white on a pane that is itself a 0.72 white — the
@@ -3253,6 +3293,19 @@ body.conversation-resizing .conversation-pane { transition: none; }
    is a 2px bar, and a translucent white bar against a translucent white pane is
    an erased bar — so it takes the hairline instead. */
 .conversation-theme.gray .inspector-memory { border-left-color: var(--conversation-hairline); }
+
+/* 2026-09-22 用户「阴影不要被切割」：overflow-x: clip 的裁剪框原本压在卡片边
+   上（pane 宽 = 卡片宽），卡片的外阴影被齐根裁掉，左右两侧看不到影子。把裁
+   剪框横向外扩一个「阴影可见半径」——灰主题卡片的配方是 `0 20px 44px
+   rgba(38,38,38,.11)`，blur 44 的高斯尾部要到 2×44px 量级才不可辨（首版取
+   36px 不够：边界上影子还剩着强度，放大后是一条竖直断痕），所以取 96px。
+   收起中/收起后靠 [inert] 把它收回 0（不收，滑动缝里会露出内层卡片的残影）。
+   overflow-clip-margin 不可动画 —— 实测把它写进 transition 也不产生中间值，
+   所以它随 [inert] 瞬间切换：收起瞬间影子即被裁回，但那一刻卡片本身正被裁
+   着滑出去，肉眼无感。深色主题不动（左卡是透明面，其黑影落在深底上不可
+   辨）。 */
+.conversation-theme.gray .conversation-pane { overflow-clip-margin: 96px; }
+.conversation-theme.gray .conversation-pane[inert] { overflow-clip-margin: 0px; }
 
 @media (max-width: 1120px) {
   /* 没拖过的宽度仍跟断点走：窄一档的窗口让两侧收窄、中栏保住宽。拖动之后宽度

@@ -106,8 +106,8 @@ export default function ResourcesView() {
                   {resource.published ? <Badge kind="ok">已发布</Badge> : <Badge kind="draft">未发布</Badge>}
                   {resource.kind === 'sop' && (resource.validationErrors?.length ?? 0) > 0 && <Badge kind="warn">校验未通过</Badge>}
                   {resource.kind === 'model' && resource.capability?.status === 'warn' && <Badge kind="warn">连接未通过</Badge>}
+                  <span className="wv-row-time">{resource.updated}</span>
                 </p>
-                <p className="wv-row-sub">{resource.key} · {resourceMeta(resource)} · r{resource.revision} · {resource.updated}</p>
                 <p className="wv-row-desc">{resource.summary}</p>
               </div>
               <div className="wv-row-actions">
@@ -147,14 +147,6 @@ export default function ResourcesView() {
   )
 }
 
-function resourceMeta(resource: GovernanceResource) {
-  if (resource.kind === 'kb') return `${resource.files?.length ?? 0} 个文件`
-  if (resource.kind === 'skill') return `${resource.files?.length ?? 0} 个文件 · 证据要求 + 输出 Schema`
-  if (resource.kind === 'connector') return `${resource.connectorType?.toUpperCase()} · ${resource.tools?.length ?? 0} 个工具`
-  if (resource.kind === 'sop') return `${resource.nodes?.length ?? 0} 个节点 · ${resource.edges?.length ?? 0} 条连线`
-  return `${resource.models?.length ?? 0} 个 Model ID · 默认 ${resource.defaultModel || '未指定'}`
-}
-
 /* ───────────────────────── detail ───────────────────────── */
 
 function ResourceDetail({ resource, onBack }: { resource: GovernanceResource; onBack: () => void }) {
@@ -176,11 +168,11 @@ function ResourceDetail({ resource, onBack }: { resource: GovernanceResource; on
           </>
         }
         title={resource.name}
-        subtitle={`${resource.key} · 负责人 ${resource.owner} · 更新于 ${resource.updated} · revision r${resource.revision}`}
         badges={
           <>
             <Badge kind={resource.published ? 'ok' : 'draft'}>{resource.published ? '已发布' : '未发布'}</Badge>
             {blocked && <Badge kind="warn">校验未通过</Badge>}
+            <span className="wv-detail-time">{resource.updated}</span>
           </>
         }
         actions={

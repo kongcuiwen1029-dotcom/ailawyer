@@ -179,7 +179,8 @@ function ConversationDialog({ title, description, onClose, children, footer }: {
 /* 思考轨迹（spec/31 对话流式输出设计语言）——
    一个可折叠的面板，展开后从下到上是三块：谁在做（数字员工）、做到哪了（思考的流式输出）、
    碰过哪些材料（材料明细）。它不是浮起来的表面：没有阴影、没有扫光。
-   收起时占一行，展开后 620px —— 员工横排与材料的两栏明细都需要这个宽度（见 spec/31 的 06 偏差段）。 */
+   收起时占一行，展开后 700px —— 与正文气泡同宽、右缘对齐；员工横排与材料的两栏明细
+   都需要这个宽度（见 spec/31 的 06 偏差段，2026-09-22 由 620px 调整）。 */
 function ThinkingTrace({ live, stopped, startedAt, endedAt }: { live: boolean; stopped: boolean; startedAt: number; endedAt: number | null }) {
   // 展开状态机（05-行为规范 5.2）：展开 = 用户手动值 ?? 运行中。
   // 用户手动切过一次之后，运行态不再覆盖他的选择 —— 收起就是收起。
