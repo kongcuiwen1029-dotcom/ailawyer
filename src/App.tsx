@@ -54,7 +54,7 @@ export default function App() {
 }
 
 function AppShell() {
-  const { projects, createProject, renameProject, setProjectStatus, bumpProjectSessions } = useWorkspace()
+  const { projects, createProject, updateProject, setProjectStatus, bumpProjectSessions } = useWorkspace()
   const [theme, setTheme] = useState<Theme>('dark')
   const [activeNav, setActiveNav] = useState<ViewId>('new')
   // The composer's tenant picker is gone, so there is nothing left to switch this.
@@ -212,7 +212,7 @@ function AppShell() {
 
   function saveProject(name: string, desc: string) {
     if (!activeProject || !name) return
-    renameProject(activeProject.id, name, desc)
+    updateProject(activeProject.id, name, desc)
   }
 
   /* Both themes render the same home screen; only the CSS palette behind the

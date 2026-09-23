@@ -8,16 +8,16 @@ export default function ProjectsView({ onOpenProject, cardStyle = 'classic' }: {
   onOpenProject: (project: Project) => void
   cardStyle?: 'classic' | 'detail'
 }) {
-  const { projects, renameProject, deleteProject, restoreProject, purgeProject, emptyRecycleBin, createProject, notify } = useWorkspace()
+  const { projects, updateProject, deleteProject, restoreProject, purgeProject, emptyRecycleBin, createProject, notify } = useWorkspace()
   const [mode, setMode] = useState<'card' | 'table'>('card')
   const [tab, setTab] = useState<'active' | 'recycle'>('active')
   const [query, setQuery] = useState('')
-  const [renaming, setRenaming] = useState<Project | null>(null)
-  const [renameValue, setRenameValue] = useState('')
+  const [editing, setEditing] = useState<Project | null>(null)
+  const [editName, setEditName] = useState('')
+  const [editSummary, setEditSummary] = useState('')
   const [confirmPurge, setConfirmPurge] = useState<Project | null>(null)
   const [creating, setCreating] = useState(false)
   const [draftName, setDraftName] = useState('')
-  const [draftCaseType, setDraftCaseType] = useState('')
   const [draftSummary, setDraftSummary] = useState('')
 
   const scoped = useMemo(() => projects.filter(project => tab === 'recycle' ? Boolean(project.deletedAt) : !project.deletedAt), [projects, tab])
@@ -29,12 +29,11 @@ export default function ProjectsView({ onOpenProject, cardStyle = 'classic' }: {
 
   const { page, setPage, pageCount, pageItems, total } = usePaged(visible, 6)
 
-  /* 新建项目在列表页就地弹窗，和重命名、彻底删除一样，不再跳回首页输入区。
+  /* 新建项目在列表页就地弹窗，和编辑、彻底删除一样，不再跳回首页输入区。
      创建后把列表拉回「我的项目」第一页并清掉搜索词：否则在回收站页签、被搜索过滤
      掉、或停在第二页的时候建完，新项目根本不在眼前。 */
   function openCreate() {
     setDraftName('')
-    setDraftCaseType('')
     setDraftSummary('')
     setCreating(true)
   }
@@ -45,7 +44,7 @@ export default function ProjectsView({ onOpenProject, cardStyle = 'classic' }: {
       notify('项目名称不能为空。', 'warn')
       return
     }
-    createProject(name, draftSummary.trim(), TENANTS[0], draftCaseType.trim() || undefined)
+    createProject(name, draftSummary.trim(), TENANTS[0])
     setCreating(false)
     setTab('active')
     setQuery('')
@@ -95,7 +94,7 @@ export default function ProjectsView({ onOpenProject, cardStyle = 'classic' }: {
               key={project.id}
               project={project}
               onOpen={() => onOpenProject(project)}
-              onRename={() => { setRenaming(project); setRenameValue(project.name) }}
+              onEdit={() => { setEditing(project); setEditName(project.name); setEditSummary(project.desc) }}
               onDelete={() => deleteProject(project.id)}
             />
           ) : (
@@ -105,14 +104,14 @@ export default function ProjectsView({ onOpenProject, cardStyle = 'classic' }: {
                 <Badge kind={project.status.kind}>{project.status.label}</Badge>
               </div>
               <h3 className="wv-card-title">{project.name}</h3>
-              <p className="wv-card-desc">{project.desc}</p>
+              <p className="wv-card-desc">{project.desc || '暂无摘要'}</p>
               <div className="wv-card-meta">
                 <span><MessageSquare size={13} strokeWidth={1.8} /> {project.sessions} 会话</span>
                 <span><Clock size={13} strokeWidth={1.8} /> {project.updated}</span>
               </div>
               <div className="wv-card-actions">
-                <button className="wv-btn ghost" onClick={event => { event.stopPropagation(); setRenaming(project); setRenameValue(project.name) }}>
-                  重命名
+                <button className="wv-btn ghost" onClick={event => { event.stopPropagation(); setEditing(project); setEditName(project.name); setEditSummary(project.desc) }}>
+                  编辑
                 </button>
                 <button className="wv-btn ghost danger" onClick={event => { event.stopPropagation(); deleteProject(project.id) }}>
                   删除
@@ -137,7 +136,7 @@ export default function ProjectsView({ onOpenProject, cardStyle = 'classic' }: {
                 <td><Badge kind={project.status.kind}>{project.status.label}</Badge></td>
                 <td>
                   <div className="wv-row-actions">
-                    <button className="wv-btn ghost" onClick={event => { event.stopPropagation(); setRenaming(project); setRenameValue(project.name) }}>重命名</button>
+                    <button className="wv-btn ghost" onClick={event => { event.stopPropagation(); setEditing(project); setEditName(project.name); setEditSummary(project.desc) }}>编辑</button>
                     <button className="wv-btn ghost danger" onClick={event => { event.stopPropagation(); deleteProject(project.id) }}>删除</button>
                   </div>
                 </td>
@@ -172,18 +171,17 @@ export default function ProjectsView({ onOpenProject, cardStyle = 'classic' }: {
 
       <Pager page={page} pageCount={pageCount} onPage={setPage} total={total} />
 
-      {renaming && (
+      {editing && (
         <Modal
-          title="重命名项目"
-          desc="项目名称会同步到会话列表与案卷视图。"
-          onClose={() => setRenaming(null)}
+          title="编辑项目"
+          onClose={() => setEditing(null)}
           footer={
             <>
-              <button className="wv-btn" onClick={() => setRenaming(null)}>取消</button>
+              <button className="wv-btn" onClick={() => setEditing(null)}>取消</button>
               <button
                 className="wv-btn primary"
-                disabled={!renameValue.trim()}
-                onClick={() => { renameProject(renaming.id, renameValue.trim()); setRenaming(null) }}
+                disabled={!editName.trim()}
+                onClick={() => { updateProject(editing.id, editName.trim(), editSummary.trim()); setEditing(null) }}
               >
                 保存
               </button>
@@ -191,7 +189,22 @@ export default function ProjectsView({ onOpenProject, cardStyle = 'classic' }: {
           }
         >
           <Field label="项目名称">
-            <input className="wv-input" value={renameValue} onChange={event => setRenameValue(event.target.value)} />
+            <input
+              className="wv-input"
+              autoFocus
+              value={editName}
+              onChange={event => setEditName(event.target.value)}
+              placeholder="例如：跨境投资"
+            />
+          </Field>
+          <Field label="项目摘要">
+            <textarea
+              className="wv-textarea"
+              rows={3}
+              value={editSummary}
+              onChange={event => setEditSummary(event.target.value)}
+              placeholder="可选"
+            />
           </Field>
         </Modal>
       )}
@@ -232,14 +245,6 @@ export default function ProjectsView({ onOpenProject, cardStyle = 'classic' }: {
               value={draftName}
               onChange={event => setDraftName(event.target.value)}
               placeholder="例如：跨境投资"
-            />
-          </Field>
-          <Field label="案件类型">
-            <input
-              className="wv-input"
-              value={draftCaseType}
-              onChange={event => setDraftCaseType(event.target.value)}
-              placeholder="可选"
             />
           </Field>
           <Field label="项目摘要">

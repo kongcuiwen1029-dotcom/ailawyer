@@ -148,8 +148,8 @@ export interface Project {
   tenant: string
   status: { kind: 'ok' | 'run' | 'draft' | 'warn'; label: string }
   deletedAt?: string
-  /* 案件类型，对应服务端 `Project.caseType`（自由文本）。新建项目时可选，所以
-     老数据与从输入区创建的项目都没有它。 */
+  /* 案件类型，对应服务端 `Project.caseType`（自由文本）。新建与编辑表单都不收
+     这个字段（对齐真实应用），所以只有种子项目带它。 */
   caseType?: string
 }
 
@@ -699,8 +699,8 @@ interface WorkspaceValue {
   toggleUserStatus: (id: string) => void
   revokeUserSessions: (id: string) => void
   /* projects */
-  createProject: (name: string, description: string, tenant: string, caseType?: string) => string
-  renameProject: (id: string, name: string, description?: string) => void
+  createProject: (name: string, description: string, tenant: string) => string
+  updateProject: (id: string, name: string, description: string) => void
   deleteProject: (id: string) => void
   restoreProject: (id: string) => void
   purgeProject: (id: string) => void
@@ -1040,12 +1040,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
      `bumpProjectSessions` 把计数改掉。注意那个函数是 `Math.max(sessions, 1) + 1`，
      对 0 和 1 都得到 2，所以在首页建出来的项目列表里显示「2 会话」，而它实际只有
      1 条会话；这里是既有行为，本次没有一并改。 */
-  const createProject = useCallback((name: string, description: string, tenant: string, caseType?: string) => {
+  const createProject = useCallback((name: string, description: string, tenant: string) => {
     const id = `project-${Date.now()}`
     setProjects(current => [
       {
-        id, name, desc: description || '尚未填写项目摘要。',
-        ...(caseType ? { caseType } : {}),
+        id, name, desc: description,
         sessions: 0, updated: '刚刚', tenant, status: { kind: 'draft' as const, label: '草稿' },
       },
       ...current,
@@ -1053,11 +1052,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     return id
   }, [])
 
-  const renameProject = useCallback((id: string, name: string, description?: string) => {
+  const updateProject = useCallback((id: string, name: string, description: string) => {
     setProjects(current => current.map(project => project.id === id
-      ? { ...project, name, desc: description ?? project.desc, updated: '刚刚' }
+      ? { ...project, name, desc: description, updated: '刚刚' }
       : project))
-    notify(`项目已重命名为「${name}」。`, 'ok')
+    notify(`项目「${name}」已保存。`, 'ok')
   }, [notify])
 
   const deleteProject = useCallback((id: string) => {
@@ -1106,7 +1105,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     createEmployee, updateEmployee, pushEmployee, disableEmployee, deleteEmployee,
     createTeam, updateTeam, activateTeam, disableTeam, toggleTeamMember,
     createUser, replaceAuthorization, resetUserPassword, toggleUserStatus, revokeUserSessions,
-    createProject, renameProject, deleteProject, restoreProject, purgeProject, emptyRecycleBin, setProjectStatus, bumpProjectSessions,
+    createProject, updateProject, deleteProject, restoreProject, purgeProject, emptyRecycleBin, setProjectStatus, bumpProjectSessions,
   }), [
     resources, employees, teams, users, loginAudit, adminAudit, projects, notices,
     notify, dismissNotice, updateResource,
@@ -1114,7 +1113,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     createEmployee, updateEmployee, pushEmployee, disableEmployee, deleteEmployee,
     createTeam, updateTeam, activateTeam, disableTeam, toggleTeamMember,
     createUser, replaceAuthorization, resetUserPassword, toggleUserStatus, revokeUserSessions,
-    createProject, renameProject, deleteProject, restoreProject, purgeProject, emptyRecycleBin, setProjectStatus, bumpProjectSessions,
+    createProject, updateProject, deleteProject, restoreProject, purgeProject, emptyRecycleBin, setProjectStatus, bumpProjectSessions,
   ])
 
   return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>

@@ -1424,8 +1424,18 @@ body::after {
    兜着，不需要新断点；子级都已经能伸——卡片网格 auto-fill 会自动加列，工作台
    中栏 flex:1，表格页自带横向滚动。 */
 .wv {
+  /* 上下 padding 的合计，给详情页那条「至少一屏高」的 min-height 用
+     （.wv-detail）。改这里的 padding 必须同步它，窄端断点里另有一份。 */
+  --wv-pad-y: 118px;
   padding: 46px 48px 72px;
 }
+
+/* 二级页面（三个详情体系——资源 / 员工 / 员工组，都渲染 .wv-detail）四边 24px：
+   2026-09-23 用户「所有二级页面的padding都改成24px」。菜单页（一级）仍是 .wv 的
+   46/48/72 不动，这里用 :has 只覆盖含 .wv-detail 的容器；--wv-pad-y 同步改成
+   新上下合计（.wv-detail 的高度公式用它）。特异性 (0,2,0) 高于窄端断点里的
+   .wv，窄端详情页因此同样是 24px。 */
+.wv:has(> .wv-detail) { padding: 24px; --wv-pad-y: 48px; }
 
 .wv-head {
   display: flex;
@@ -1879,9 +1889,19 @@ body::after {
 .wv-btn.ghost { background: transparent; border-color: transparent; padding: 7px 10px; font-size: 12.5px; }
 .wv-btn.danger { color: #c0574f; border-color: rgba(192,87,79,0.32); }
 .wv-tabs.inline { margin: 0; }
+/* 资源市场把搜索框放进了 tabs 行右端（历史布局是独立一行 .wv-filter，2026-09-22
+   用户「和知识库水平对齐，放到右边」）。搜索框自然高 40.25 比 tab 的 38.25 高一截，
+   flex 默认 stretch 会把五个 tab 一起拉到 40.25；让行内元素保持各自高度、垂直居中。 */
+.wv-tabs.with-search { align-items: center; }
 
 /* Detail shell */
-.wv-detail { display: flex; flex-direction: column; }
+/* 详情页给一个确定高度（2026-09-22 用户「高度做自适应」）：flex 链
+   .wv-detail-body → .wv-workspace 只有在容器高度确定时才拿得到确定空间去分配，
+   写 min-height 不行（高度仍是 auto，工作台被预览正文的固有高度撑到 1436）。
+   height = 一屏减 .wv 的上下 padding，值与 min-height 时代相同、语义等价；
+   真实应用那条链也是 h-full 的确定高度。内容更高时（矮窗里工作台触到 460px
+   下限）溢出依然计入 .wv-scroll 的滚动区，整页滚动、不丢内容。 */
+.wv-detail { display: flex; flex-direction: column; height: calc(100vh - var(--wv-pad-y)); }
 /* 头部与内容之间原本有一条 1px 分隔线（padding-bottom 22px + border-bottom）。
    2026-09-22 用户要求「去掉顶部这根线，并整体上移，深浅版同步修改」：线与它
    让出的 22px 一起删，head 与内容的间距交回 body 的 padding-top 6px 与各内容
@@ -1898,16 +1918,23 @@ body::after {
    它被 inline-flex 的默认 stretch 拉高、文字贴着顶；颜色在两个主题块里与
    .wv-detail-sub 同一组。 */
 .wv-detail-time { font-size: 12.5px; font-weight: 400; align-self: center; }
-.wv-detail-body { display: flex; flex-direction: column; padding-top: 6px; }
+/* min-height: 0 是必需的：flex 子项的自动最小高度默认取内容固有高度，预览区
+   正文的固有高度会顺着链路把工作台撑过头（实测 900 高视口被撑到 1436）。归零
+   后 body 才肯收缩到「一屏减头部」，把确定的高度交给工作台去分配。 */
+.wv-detail-body { display: flex; flex-direction: column; flex: 1; min-height: 0; padding-top: 6px; }
 
 /* 知识库详情的三栏工作区（2026-09-17 对齐真实应用的知识库详情页）。骨架只在这里写
    一遍：卡片、40px 页头、内部滚动区、分隔条；配色分给下面两个主题块。左栏与中栏是
    一张联合卡片（圆角只落在最外两侧，中间由分隔条那 1px 线充当边界），右栏是独立
    卡片，与中栏之间那条 16px 的分隔条既当间距又能拖——真实应用也是这个排法。
-   高度给 clamp：窗口够高时跟着视口长，窗口矮时不低于 460px，再矮就让整页滚动。 */
+   高度做自适应（2026-09-22 用户「高度做自适应」）：原先写死 clamp(460px,
+   calc(100vh - 300px), 900px) —— 减的 300 比实际周边（208px）多，底部恒留
+   92px 空白，且 900px 封顶后窗口再高也不再长。改成 flex 撑满 .wv-detail-body
+   的剩余空间（链路见 .wv-detail 的 min-height，真实应用就是这个形态：
+   工作台 h-full 填满）。窗口矮时 460px 下限仍在，再矮让整页滚动；上限不再设。 */
 .wv-workspace {
   display: flex; align-items: stretch;
-  height: clamp(460px, calc(100vh - 300px), 900px);
+  flex: 1; min-height: 460px;
   margin-top: 18px; overflow-x: auto;
 }
 .wv-ws-pane {
@@ -2017,6 +2044,10 @@ body.wv-resizing { user-select: none; cursor: col-resize; }
   display: grid;
   grid-template-columns: minmax(22rem, 2fr) minmax(0, 3fr);
   gap: 16px;
+  /* flex: none：本板高度只由自己的 clamp 决定。详情页的 flex 链给
+     .wv-detail-body 一个确定高度后，这里作为其 flex 子项会被默认的
+     flex-shrink 压矮（实测 900 高视口下 600 → 532），显式退出分配。 */
+  flex: none;
   height: clamp(460px, calc(100vh - 300px), 900px);
   margin-top: 16px;
 }
@@ -2597,7 +2628,7 @@ body.wv-resizing { user-select: none; cursor: col-resize; }
 .gy-main.has-view { justify-content: stretch; align-items: stretch; padding: 0; }
 
 @media (max-width: 1000px) {
-  .wv { padding: 32px 20px 56px; }
+  .wv { --wv-pad-y: 88px; padding: 32px 20px 56px; }
   .wv-head { flex-direction: column; align-items: flex-start; }
   .wv-row { flex-wrap: wrap; }
   .wv-row-actions { width: 100%; }

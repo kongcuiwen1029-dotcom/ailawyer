@@ -76,20 +76,16 @@ export default function ResourcesView() {
         }
       />
 
-      <div className="wv-tabs">
+      <div className="wv-tabs with-search">
         {TABS.map(({ id, label, icon: Icon }) => (
           <button key={id} className={`wv-tab${tab === id ? ' active' : ''}`} onClick={() => { setTab(id); setPage(1) }}>
             <Icon size={14} strokeWidth={1.9} /> {label}
           </button>
         ))}
-      </div>
-
-      <div className="wv-filter">
-        <div className="wv-search">
+        <div className="wv-search wv-tabs-tail">
           <Search size={14} strokeWidth={1.9} />
           <input className="wv-input" placeholder={`搜索${KIND_TITLE[tab]}名称、key 或说明`} value={query} onChange={event => { setQuery(event.target.value); setPage(1) }} />
         </div>
-        <span className="wv-filter-note">共 {inTab.length} 个{KIND_TITLE[tab]}资源</span>
       </div>
 
       {!pageItems.length && <Empty text="没有符合条件的资源。" />}

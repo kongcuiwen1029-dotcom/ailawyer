@@ -3,17 +3,17 @@ import { FolderOpen, MessageSquare, MoreHorizontal, Pencil, Trash2 } from 'lucid
 import type { Project } from '../state/workspace'
 
 /* 卡片只承载服务端 `Project` 真正有的字段：名称、案件类型、摘要、最近编辑时间，
-   加上原型自身的会话数。菜单与真实应用一致（打开 / 重命名 / 删除），
+   加上原型自身的会话数。菜单与真实应用一致（打开 / 编辑 / 删除），
    删除走回收站而不是物理删除。 */
 export default function ProjectCard({
   project,
   onOpen,
-  onRename,
+  onEdit,
   onDelete,
 }: {
   project: Project
   onOpen: () => void
-  onRename: () => void
+  onEdit: () => void
   onDelete: () => void
 }) {
   const [menu, setMenu] = useState(false)
@@ -67,7 +67,7 @@ export default function ProjectCard({
           {menu && (
             <div className="wv-menu" role="menu" onClick={event => event.stopPropagation()}>
               <button role="menuitem" onClick={pick(onOpen)}><FolderOpen size={13} strokeWidth={1.9} /> 打开</button>
-              <button role="menuitem" onClick={pick(onRename)}><Pencil size={13} strokeWidth={1.9} /> 重命名</button>
+              <button role="menuitem" onClick={pick(onEdit)}><Pencil size={13} strokeWidth={1.9} /> 编辑</button>
               <div className="wv-menu-sep" />
               <button role="menuitem" className="danger" onClick={pick(onDelete)}><Trash2 size={13} strokeWidth={1.9} /> 删除</button>
             </div>
